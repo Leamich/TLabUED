@@ -1,0 +1,5 @@
+run_name,SixteenRooms,SixteenRooms2,Labyrinth,LabyrinthFlipped,Labyrinth2,StandardMaze,StandardMaze2,StandardMaze3
+accel_maxmc,1.0,0.283,0.8,0.767,0.783,0.583,0.783,0.433
+dr,0.733,0.367,0.0,0.3,0.0,0.5,0.0,0.3
+plr_maxmc,0.967,0.5,0.967,0.033,0.733,0.133,0.233,0.067
+sfl_accel_learnability,0.7,0.633,0.867,1.0,0.8,0.967,1.0,1.0

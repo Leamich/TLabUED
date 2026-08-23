@@ -1,5 +1,7 @@
 # Exact pins from docs/TASK.md. jaxued does not pin its own dependencies, so
 # these versions are the reproducibility contract - do not float them.
+# NOTE: install with `--constraint constraints.txt`, which bounds the CUDA
+# wheels that jax leaves unpinned. Without it the install segfaults on GPU.
 jax[cuda12]==0.4.30
 flax==0.8.5
 chex==0.1.86
@@ -18,3 +20,5 @@ moviepy<2
 # Analysis only (not needed to train).
 pandas
 matplotlib
+# scripts/report.py renders its tables with DataFrame.to_markdown
+tabulate

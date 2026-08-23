@@ -88,6 +88,79 @@ number. It is the mechanism evidence, which is per-run and seed-robust:
 A third run (`sfl_accel_nophase`) and second seeds are the obvious follow-ups if the mechanism
 signals look right.
 
+## Results
+
+Both runs completed 30000 updates on an RTX 4090. Numbers below average the last 3 evaluations
+(10 attempts per level); `results/summary.md` is the generated version of this table.
+
+| run | seed | held-out solve rate | last-20-eval mean |
+|---|---|---|---|
+| **sfl_accel_learnability** | 0 | **0.871** | **0.829** |
+| accel_maxmc | 1 | 0.738 | 0.661 |
+| accel_maxmc | 0 (earlier) | 0.621 | - |
+| plr_maxmc | 0 (earlier) | 0.454 | - |
+| dr | 0 (earlier) | 0.275 | - |
+
+Per level, this is not a uniform win - it is a trade:
+
+| | SixteenRooms | SixteenRooms2 | Labyrinth | LabyrinthFlipped | Labyrinth2 | StandardMaze | StandardMaze2 | StandardMaze3 |
+|---|---|---|---|---|---|---|---|---|
+| sfl_accel | 0.70 | 0.63 | 0.87 | **1.00** | 0.80 | **0.97** | **1.00** | **1.00** |
+| accel (mean of 2 seeds) | **1.00** | 0.28 | 0.80 | 0.77 | 0.78 | 0.58 | 0.78 | 0.43 |
+
+SFL-ACCEL takes the three `StandardMaze` levels and `LabyrinthFlipped` - the long, corridor-heavy
+ones - and gives back `SixteenRooms`, the most open level in the set. That is the shape you would
+expect if the curriculum moved toward levels that need long, committed routes.
+
+**Budget, measured rather than predicted.** From the run's own counters:
+
+| | env steps | DR | replay (gradient) | mutation | SFL phase | total |
+|---|---|---|---|---|---|---|
+| sfl_accel (measured) | 245,760,000 | 242 | 13,199 | 13,199 | 3,360 | 30,000 |
+| accel (analytic) | 245,760,000 | 3,333 | 13,333 | 13,333 | - | 30,000 |
+
+Identical env steps; SFL-ACCEL ran on **1.0% fewer gradient updates** than ACCEL, so the win is not
+bought with extra learning. It was also cheaper in wall clock - 0.9 h against 1.3 h for the same
+245.76M steps - because the phase's 3,360 updates skip the PPO call entirely.
+
+### What the mechanism actually did
+
+Read `results/figs/curriculum.png` alongside these. Three things are worth arguing about:
+
+1. **The frontier settled at p ≈ 0.80, not 0.50.** `train/success_rate` climbs to 0.80 by update
+   ~3000 and stays there for the remaining 27000; buffer mean `p` sits at 0.88. Learnability is
+   symmetric about 0.5, so a batch at p = 0.8 scores 0.16 rather than the 0.25 ceiling. The reason
+   is the replay branch: it samples by *rank* over scores with `staleness_coeff=0.3`, and a level
+   whose stored `p` has drifted up is still replayed until its estimate catches up. So the method
+   as built tracks a "mostly solvable" frontier rather than a coin-flip one. That it still beat
+   ACCEL suggests p ≈ 0.8 is a perfectly good place to train - but "SFL keeps you at p = 0.5" is
+   *not* what this run shows, and it is the first thing I would probe next (lower `sfl_p_decay`, or
+   score replay candidates with more attempts).
+2. **Random levels stop being learnable, quickly.** The phase's population learnability collapses
+   from 0.15 to ~0.003 by update 12000: fresh `minigrid_walls` levels are simply solved by a
+   competent student. The selection gain persists - the kept top-32 average 5-10x the population's
+   learnability all the way to update 30000 - but in absolute terms the phase is choosing the best
+   of a bad batch late in training. This is exactly the failure mode SFL's own paper describes for
+   pure random generation, and it says the *mutation* ladder is what carries the curriculum after
+   the first few thousand updates. It also means `sfl_topk` is probably too generous late: the
+   phase inserts 32 levels whose learnability is near zero.
+3. **The level distribution is not the constraint.** The launch-time BFS says the generator makes
+   99.7% solvable levels, median 11 optimal steps, nothing above 30. So "learnability starves
+   impossible levels" - the property I expected to matter most - had almost nothing to starve.
+   Whatever separates the two methods here comes from where the *mutation* ladder went:
+   `level/mean_num_blocks` ends at 44.0 for SFL and 45.1 for ACCEL, so both built structurally
+   comparable levels, and the difference is which of them the student was made to replay.
+
+### What this does not establish
+
+One seed per method, and different seeds at that. ACCEL's own two seeds differ by 0.117
+(0.621 vs 0.738), and SFL-ACCEL beats the better of them by 0.133 - a margin of the same order as
+the seed spread. The learning curve helps (SFL is above ACCEL for essentially the whole second half
+of training, not at one lucky evaluation) and so does the per-level pattern being a coherent story
+rather than noise, but this is one run. Before quoting 0.87 as the method's number, run seeds 1 and
+2, and run `sfl_accel_nophase` to find out whether the evaluation phase or the learnability score
+is doing the work.
+
 ## Checks before launching
 
 ```bash
