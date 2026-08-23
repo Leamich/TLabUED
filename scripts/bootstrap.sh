@@ -59,9 +59,17 @@ uv pip install --python "$PY" -r "$REPO_ROOT/requirements.txt"
 uv pip install --python "$PY" --no-deps -e "$REPO_ROOT/third_party/jaxued"
 uv pip install --python "$PY" --no-deps -e "$REPO_ROOT"
 
+# gymnax imports matplotlib.pyplot at import time. If this script was launched
+# from a Jupyter kernel, MPLBACKEND points at matplotlib_inline, which does not
+# exist in this venv - force a headless backend.
+export MPLBACKEND=Agg
+
 "$PY" - <<'PYCHECK'
-import jax, jaxued, tlab_ued
+from jaxued.environments import Maze  # the import that actually pulls gymnax in
+import jax, tlab_ued
+from tlab_ued.teachers import TEACHERS
 print("jax", jax.__version__, "devices:", jax.devices())
+print("teachers:", sorted(TEACHERS))
 assert any(d.platform == "gpu" for d in jax.devices()), "no GPU visible to JAX"
 PYCHECK
 

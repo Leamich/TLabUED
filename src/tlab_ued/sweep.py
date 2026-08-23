@@ -40,6 +40,28 @@ class Job:
         return make_config(preset=self.preset, seed=self.seed, **{**common, **self.overrides})
 
 
+def child_env(**overrides: str) -> Dict[str, str]:
+    """Environment for a subprocess running the *venv* interpreter.
+
+    The parent is often a Jupyter kernel from a different Python installation,
+    and a few of its variables are actively hostile to the child:
+
+    - `MPLBACKEND` is set by the kernel to `module://matplotlib_inline...`, a
+      package the venv does not have. gymnax imports `matplotlib.pyplot` at
+      import time, so inheriting it turns every `import jaxued.environments`
+      into a `ValueError: Key backend`. Headless children want Agg.
+    - `PYTHONPATH` / `PYTHONHOME` would splice the kernel's site-packages
+      (numpy 2, a different jax) into the venv. Nothing here needs them:
+      `tlab_ued` and `jaxued` are installed into the venv.
+    """
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
+    env["MPLBACKEND"] = "Agg"
+    env.setdefault("WANDB_MODE", "offline")
+    env.setdefault("PYTHONUNBUFFERED", "1")
+    env.update(overrides)
+    return env
+
+
 def _pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -112,9 +134,7 @@ def launch(
     if resume and status["state"] == "interrupted":
         config = {**config, "resume": True}
 
-    env = dict(os.environ)
-    env.setdefault("WANDB_MODE", "offline")
-    env.setdefault("PYTHONUNBUFFERED", "1")
+    env = child_env()
     if mem_fraction is not None:
         # Several trainers share one A100: cap each one's XLA arena instead of
         # letting the first process preallocate 75% of the card.
