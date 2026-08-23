@@ -28,6 +28,9 @@ $PY -m tlab_ued.train --preset accel --seed 0 --out_dir /workspace/tlab_ued
 # the baseline sweep, detached and resumable
 $PY -m tlab_ued.sweep --presets dr plr accel --seeds 0 1 2 --out_dir /workspace/tlab_ued --wait
 
+# what the curriculum is made of: solvable %, optimal-step distribution (no GPU needed)
+$PY -m tlab_ued.level_diagnostics --preset accel
+
 # evaluate a checkpoint on the held-out levels
 $PY -m tlab_ued.train --mode eval --checkpoint_directory /workspace/tlab_ued/checkpoints/accel_maxmc/0
 ```
@@ -42,6 +45,7 @@ src/tlab_ued/
   teachers/       level-selection strategies: dr.py, plr.py, accel.py, <yours>.py
   scoring.py      score-function registry - what "worth training on" means
   levels.py       level generator / mutator registry
+  level_diagnostics.py  BFS over generated levels: how many are solvable, and how hard
   train.py        teacher-agnostic training loop, checkpointing, eval protocol
   evaluate.py     checkpoint -> held-out solve rates
   sweep.py        detached, resumable job queue
@@ -57,6 +61,7 @@ Outputs (all gitignored, all under `--out_dir`):
 runs/<run_name>/<seed>/metrics.csv    one row per eval step - what the plots read
 runs/<run_name>/<seed>/meta.json      git SHAs, JAX version, GPU, full config
 runs/<run_name>/<seed>/train.log      stdout
+runs/<run_name>/<seed>/level_diagnostics.json   the launch-time BFS report
 checkpoints/<run_name>/<seed>/        orbax checkpoints + config.json - what gets submitted
 results/<run_name>/<seed>/            eval-mode outputs
 ```
@@ -84,6 +89,13 @@ remembered:
 | `plr` | `python examples/maze_plr.py` (PLR-perp: no exploratory gradient updates) |
 | `accel` | `python examples/maze_plr.py --use_accel` |
 
+Plus our own, which has no upstream counterpart:
+
+| preset | what it is |
+|---|---|
+| `sfl_accel` | ACCEL with SFL's learnability score in place of MaxMC ([docs/experiments/sfl_accel.md](docs/experiments/sfl_accel.md)) |
+| `sfl_accel_nophase` | the ablation: learnability scoring, no evaluation phase |
+
 DR is a separate teacher rather than "PLR with replay off" because upstream's DR genuinely differs:
 it wraps the env in `AutoResetWrapper` and carries env state across updates, where PLR/ACCEL use
 `AutoReplayWrapper` and reset onto a chosen batch of levels each update.
@@ -96,6 +108,57 @@ $PY -m tlab_ued.parity --presets dr plr accel --num_updates 500
 
 runs both implementations in-process on the same seed and diffs every logged scalar. Expected
 output: identical, to the last bit.
+
+## SFL-ACCEL
+
+Our method. `p(1-p)` over a level's success rate (Rutherford et al., 2024) decides what enters the
+level buffer; ACCEL's mutation operator evolves it from there. Because a single rollout gives one
+episode per level - and `p(1-p)` of a single Bernoulli sample is exactly 0 either way - levels are
+scored with several attempts each (the 32 envs carry `32/k` distinct levels), replayed levels carry
+a decaying running estimate of `p`, and every `--sfl_period` updates a phase evaluates a large batch
+of fresh random levels at a frozen policy and keeps the most learnable.
+
+The phase is paid for out of the frozen budget, not added to it: it costs what ACCEL spends on its
+DR branch, and `--replay_prob 1.0` keeps the count of *gradient* updates within 0.1% of ACCEL's.
+Every run prints its expected budget split before the first update and logs the actual branch
+counts to `metrics.csv`:
+
+```bash
+$PY -m tlab_ued.sweep --jobs accel:1 sfl_accel:0 --out_dir /workspace/tlab_ued --wait
+```
+
+Curriculum diagnostics land in the CSV alongside the solve rates: `train/success_rate` (how hard
+the levels being trained on actually are), `sfl/topk_learnability` vs `sfl/population_learnability`
+(how much the phase's selection is buying), `level_sampler/mean_p`, and `branch/num_*_updates`.
+
+## Level diagnostics
+
+Every training run starts by BFS-ing a sample of the levels its teacher will generate, and prints
+what it found before the first update:
+
+* **solvable %** - split into "the goal is walled off" and "the optimal solution is longer than
+  the 250-step episode". Both are levels the student cannot learn from, but they have different
+  causes.
+* **optimal steps** - the true minimum number of *env* steps, searched over `(position,
+  direction)` with `left` / `right` / `forward`, ending the way the env ends an episode: by
+  stepping into the goal cell. Turning costs a step, and the goal is not walkable, so this is not
+  the grid distance.
+* **best return** - what that optimal play is worth under the env's time penalty
+  (`1 - 0.9 * steps / 250`), i.e. the ceiling on `return/mean` for that distribution.
+* **difficulty buckets, reachable area, wall count** - the shape of the distribution, not just its
+  mean. A curriculum drifting into "trivial" or into "unsolvable" is visible here long before the
+  eval curve reacts.
+
+For a mutation teacher (ACCEL) the same report is printed for the mutated children, which is how
+you tell a mutation operator that ratchets difficulty up from one that mostly seals goals off.
+
+The report goes to stdout and to `runs/<run_name>/<seed>/level_diagnostics.json`. It draws from
+its own PRNG key, so `--diagnose_levels 0` (off) and `--diagnose_levels 8192` produce
+bit-identical training runs. Run it standalone to compare generator settings without training:
+
+```bash
+$PY -m tlab_ued.level_diagnostics --preset accel --n_walls 60 --diagnose_levels 8192
+```
 
 ## Adding an idea
 
@@ -116,7 +179,11 @@ unchanged.
 $PY -m pytest tests -q
 ```
 
-`tests/test_config.py` covers the freeze guard and config round-trips; `tests/test_teachers.py`
+`tests/test_sfl_accel.py` covers the learnability score, the budget arithmetic against ACCEL's,
+and a CPU run through every SFL branch; `tests/test_config.py` covers the freeze guard and config
+round-trips;
+`tests/test_level_diagnostics.py` checks the BFS against a brute-force search over the real
+`Maze.step_env` transitions; `tests/test_teachers.py`
 runs each teacher for a few updates on a tiny config and checks that a written checkpoint reads
 back with the expected parameter shapes.
 

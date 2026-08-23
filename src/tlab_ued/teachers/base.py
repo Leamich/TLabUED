@@ -205,6 +205,14 @@ class Teacher(abc.ABC):
         return jnp.zeros((), dtype=jnp.int32)
 
     # --- reporting -------------------------------------------------------------
+    def startup_report(self) -> Dict[str, Any]:
+        """Scalars worth printing before the first update, e.g. a budget split.
+
+        Printed by `train.py` and nothing else, so it is free to describe
+        whatever this teacher does with the budget. Empty by default.
+        """
+        return {}
+
     def log_dict(self, train_state: TrainState) -> Dict[str, Dict[str, Any]]:
         """Scalars for wandb/CSV.
 
@@ -216,6 +224,37 @@ class Teacher(abc.ABC):
     def media(self, train_state: TrainState) -> Dict[str, Any]:
         """Rendered images keyed by name. Honour `config["log_media"]`."""
         return {}
+
+
+def branch_budget(config: Dict[str, Any], reserved_updates: int = 0) -> Dict[str, float]:
+    """How a PLR-family run is expected to spend the frozen budget.
+
+    Steady state, with `replay_prob` p and (under ACCEL) a mutation update after
+    every replay: a cycle is either a replay plus its mutation, with probability
+    p, or a single DR update, with probability 1-p. So the replay - i.e. the
+    *gradient* - share of the updates is `p / (1 + p)`.
+
+    `reserved_updates` are updates a teacher spends outside that scheme (the SFL
+    evaluation phases). They come out of the same total, which is what makes the
+    comparison budget-matched.
+
+    Comparing two methods means comparing these numbers, so it lives here rather
+    than in the teacher that happens to need it most.
+    """
+    total = config["num_updates"]
+    p = config["replay_prob"] if config["teacher"] != "dr" else 0.0
+    mutates = bool(config.get("use_accel"))
+    per_replay = 2 if mutates else 1  # a replay drags a mutation along under ACCEL
+    cycle = p * per_replay + (1 - p)  # updates per cycle
+    replay = (total - reserved_updates) * p / cycle
+    return {
+        "env_steps": total * config["num_train_envs"] * config["num_steps"],
+        "total_updates": total,
+        "reserved_updates": reserved_updates,
+        "expected_gradient_updates": replay if p else float(total),
+        "expected_mutation_updates": replay if mutates else 0.0,
+        "expected_dr_updates": (total - reserved_updates) - replay * per_replay,
+    }
 
 
 def make_level_sampler(config: Dict[str, Any]):

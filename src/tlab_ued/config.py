@@ -97,8 +97,34 @@ EXTRA_DEFAULTS: Dict[str, Any] = {
     "out_dir": ".",
     # continue from the latest checkpoint of this run, if one exists
     "resume": False,
+    # BFS sanity check on the training distribution, printed before the run and
+    # written to <run_dir>/level_diagnostics.json: how many generated levels are
+    # solvable at all, and how hard the solvable ones are. 0 turns it off. It
+    # draws from its own PRNG key, so it never shifts the training stream.
+    "diagnose_levels": 1024,
+    # how many rounds of the mutator to apply before diagnosing the children
+    # (mutation teachers only)
+    "diagnose_mutation_rounds": 1,
     # bypass the student-freeze guard (deliberate ablations only)
     "allow_student_changes": False,
+    # === SFL (teacher `sfl_accel`; see teachers/sfl_accel.py) ===
+    # How many attempts each level gets when it is scored. The 32 envs of an
+    # update carry num_train_envs/k distinct levels, so this costs nothing extra
+    # - it trades levels-per-update for a success rate that is not 0 or 1.
+    "sfl_num_attempts": 4,
+    # Updates between the start of one SFL evaluation phase and the next; 0
+    # disables the phase and leaves learnability scoring on the ACCEL branches
+    # (the ablation that separates "learnability" from "SFL").
+    "sfl_period": 250,
+    # Levels evaluated per phase, and how many of them are kept. 224 * 4 / 32 =
+    # 28 updates per phase, 120 phases over a full run: 11.2% of the budget,
+    # which is what ACCEL spends on its DR branch.
+    "sfl_num_levels": 224,
+    "sfl_topk": 32,
+    # Weight of the newest observation in a replayed level's running success
+    # rate. 0.25 forgets over ~10 replays, which is what keeps a buffer entry's
+    # score tracking the policy instead of the policy it was measured against.
+    "sfl_p_decay": 0.25,
 }
 
 DEFAULTS: Dict[str, Any] = {
@@ -121,6 +147,26 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     # python examples/maze_plr.py --exploratory_grad_updates (non-robust PLR)
     "plr_exploratory": {"teacher": "plr", "exploratory_grad_updates": True},
     "accel_exploratory": {"teacher": "accel", "use_accel": True, "exploratory_grad_updates": True},
+    # Ours: ACCEL with SFL's learnability score (Rutherford et al., 2024) in
+    # place of MaxMC. `replay_prob=1.0` is what keeps the budget matched to
+    # ACCEL's - the SFL phase replaces the DR branch rather than adding to it, so
+    # outside a phase every update is a replay or its mutation, and the count of
+    # *gradient* updates lands within 0.1% of ACCEL's. See teachers/sfl_accel.py.
+    "sfl_accel": {
+        "teacher": "sfl_accel",
+        "use_accel": True,
+        "exploratory_grad_updates": False,
+        "score_function": "learnability",
+        "replay_prob": 1.0,
+    },
+    # The ablation: learnability everywhere, but no evaluation phase.
+    "sfl_accel_nophase": {
+        "teacher": "sfl_accel",
+        "use_accel": True,
+        "exploratory_grad_updates": False,
+        "score_function": "learnability",
+        "sfl_period": 0,
+    },
 }
 
 BASELINE_PRESETS = ("dr", "plr", "accel")
@@ -215,7 +261,36 @@ def build_parser() -> argparse.ArgumentParser:
         "--log_media", type=str, default=DEFAULTS["log_media"], choices=["all", "levels", "none"]
     )
     _bool_flag(p, "resume", DEFAULTS["resume"], "continue from the latest checkpoint of this run")
+    p.add_argument(
+        "--diagnose_levels",
+        type=int,
+        default=DEFAULTS["diagnose_levels"],
+        help="BFS-diagnose this many generated levels before training (0 = off)",
+    )
+    p.add_argument(
+        "--diagnose_mutation_rounds",
+        type=int,
+        default=DEFAULTS["diagnose_mutation_rounds"],
+        help="rounds of the mutator to apply before diagnosing the children",
+    )
     _bool_flag(p, "allow_student_changes", DEFAULTS["allow_student_changes"])
+    # === SFL (ours) ===
+    sfl = p.add_argument_group("SFL teacher")
+    sfl.add_argument(
+        "--sfl_num_attempts",
+        type=int,
+        default=DEFAULTS["sfl_num_attempts"],
+        help="attempts per level when scoring; num_train_envs must be divisible by it",
+    )
+    sfl.add_argument(
+        "--sfl_period",
+        type=int,
+        default=DEFAULTS["sfl_period"],
+        help="updates between SFL evaluation phases (0 = no phase)",
+    )
+    sfl.add_argument("--sfl_num_levels", type=int, default=DEFAULTS["sfl_num_levels"])
+    sfl.add_argument("--sfl_topk", type=int, default=DEFAULTS["sfl_topk"])
+    sfl.add_argument("--sfl_p_decay", type=float, default=DEFAULTS["sfl_p_decay"])
 
     group = p.add_argument_group("Training params")
     # === PPO (frozen) ===
@@ -275,6 +350,8 @@ def default_run_name(config: Dict[str, Any]) -> str:
         name += f"_{str(config['score_function']).lower()}"
         if config.get("exploratory_grad_updates"):
             name += "_expl"
+    if config["teacher"] == "sfl_accel" and not config.get("sfl_period"):
+        name += "_nophase"
     return name
 
 
@@ -296,6 +373,12 @@ def finalize(config: Dict[str, Any]) -> Dict[str, Any]:
             f"num_updates ({config['num_updates']}) must be a multiple of eval_freq "
             f"({config['eval_freq']}): the loop runs num_updates // eval_freq times."
         )
+    if config.get("teacher") == "sfl_accel":
+        # Sizing errors here would otherwise surface as a shape mismatch inside a
+        # jitted branch, minutes into a run.
+        from tlab_ued.teachers.sfl_accel import validate as validate_sfl
+
+        validate_sfl(config)
     return config
 
 

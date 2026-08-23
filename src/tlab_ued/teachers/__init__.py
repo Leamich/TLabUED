@@ -13,11 +13,13 @@ from tlab_ued.teachers.accel import ACCELTeacher
 from tlab_ued.teachers.base import Teacher, TrainContext, TrainState
 from tlab_ued.teachers.dr import DRTeacher
 from tlab_ued.teachers.plr import PLRTeacher
+from tlab_ued.teachers.sfl_accel import SFLACCELTeacher
 
 TEACHERS: Dict[str, Type[Teacher]] = {
     "dr": DRTeacher,
     "plr": PLRTeacher,
     "accel": ACCELTeacher,
+    "sfl_accel": SFLACCELTeacher,
 }
 
 
@@ -37,4 +39,5 @@ __all__ = [
     "DRTeacher",
     "PLRTeacher",
     "ACCELTeacher",
+    "SFLACCELTeacher",
 ]
