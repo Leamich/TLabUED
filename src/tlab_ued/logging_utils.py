@@ -143,10 +143,15 @@ class Logger:
         env_steps = update_count * config["num_train_envs"] * config["num_steps"]
         print(f"Logging update: {update_count}", flush=True)
 
+        # `sps` keeps upstream's formula (cumulative steps / last interval) so the
+        # numbers stay comparable with theirs - but it is not a rate: it climbs
+        # steadily as training proceeds. `steps_per_second` is the real one.
+        interval_steps = config["eval_freq"] * config["num_train_envs"] * config["num_steps"]
         log_dict: Dict[str, Any] = {
             "num_updates": update_count,
             "num_env_steps": env_steps,
             "sps": env_steps / stats["time_delta"],
+            "steps_per_second": interval_steps / stats["time_delta"],
             "time_delta": stats["time_delta"],
         }
 

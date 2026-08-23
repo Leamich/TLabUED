@@ -48,15 +48,25 @@ def _scalars(log: Dict[str, Any]) -> Dict[str, float]:
 
 @contextlib.contextmanager
 def capture_wandb_logs(sink: List[Dict[str, float]]):
-    """Intercept `wandb.log` while leaving `wandb.init` intact.
+    """Intercept every `wandb.log` call while leaving `wandb.init` intact.
 
     `wandb.init` has to run for real: upstream reads `wandb.config` and calls
     `.as_dict()` on it. Offline mode keeps that working without an API key.
+
+    The interception patches `Run.log` on the class, not the module-level
+    `wandb.log`: `wandb.init()` rebinds `wandb.log` to the live run's bound
+    method, so a spy installed on the module before init is silently discarded
+    the moment the run starts - and the capture comes back empty.
     """
     import wandb
+    from wandb.sdk import wandb_run
 
     os.environ["WANDB_MODE"] = "offline"
+    original_run_log = wandb_run.Run.log
     original_log, original_image, original_video = wandb.log, wandb.Image, wandb.Video
+
+    def spy_run_log(self, data, *args, **kwargs):
+        sink.append(_scalars(data))
 
     def spy(data, *args, **kwargs):
         sink.append(_scalars(data))
@@ -64,7 +74,8 @@ def capture_wandb_logs(sink: List[Dict[str, float]]):
     def no_media(*args, **kwargs):
         return None
 
-    wandb.log = spy
+    wandb_run.Run.log = spy_run_log
+    wandb.log = spy  # covers any call made before wandb.init rebinds it
     # Only scalars are compared, and encoding upstream's eval animations would
     # otherwise drag moviepy into the check.
     wandb.Image = no_media
@@ -72,6 +83,7 @@ def capture_wandb_logs(sink: List[Dict[str, float]]):
     try:
         yield sink
     finally:
+        wandb_run.Run.log = original_run_log
         wandb.log, wandb.Image, wandb.Video = original_log, original_image, original_video
 
 
@@ -113,13 +125,53 @@ def run_ours(config: Dict[str, Any]) -> List[Dict[str, float]]:
 def compare(ours: List[Dict[str, float]], theirs: List[Dict[str, float]]) -> Dict[str, Any]:
     """Max absolute difference per metric, over the eval steps both produced."""
     n = min(len(ours), len(theirs))
+    if n == 0:
+        # Loud, because "0 differences over 0 steps" must never read as a pass.
+        return {
+            "num_eval_steps": 0,
+            "identical": False,
+            "max_abs_diff": {},
+            "worst": None,
+            "error": (
+                f"captured no metrics (ours={len(ours)} log calls, "
+                f"upstream={len(theirs)}); the wandb interception is broken, "
+                "not the trainer"
+            ),
+        }
     keys = sorted(set(ours[0]) & set(theirs[0])) if n else []
     # `sps` and `time_delta` are wall-clock, not results.
     keys = [k for k in keys if k not in ("sps", "time_delta")]
+
+    def step_diff(a, b):
+        """NaN-aware: two NaNs agree, one NaN does not.
+
+        Some level-sampler statistics are legitimately NaN early on (an empty
+        buffer means a 0/0 weighted mean). Both implementations produce the
+        same NaN, and `nan != nan` would otherwise report a phantom difference
+        - and poison `max()`, since every NaN comparison is False.
+        """
+        a_nan, b_nan = np.isnan(a), np.isnan(b)
+        if a_nan and b_nan:
+            return 0.0
+        if a_nan or b_nan:
+            return float("inf")
+        return abs(a - b)
+
+    missing = float("inf")  # a key absent on one side at some step
     diffs = {
-        key: max(abs(ours[i].get(key, np.nan) - theirs[i].get(key, np.nan)) for i in range(n))
+        key: max(
+            step_diff(ours[i].get(key, np.nan), theirs[i].get(key, np.nan))
+            if key in ours[i] and key in theirs[i]
+            else missing
+            for i in range(n)
+        )
         for key in keys
     }
+    nan_metrics = sorted(
+        key
+        for key in keys
+        if any(np.isnan(ours[i].get(key, 0.0)) or np.isnan(theirs[i].get(key, 0.0)) for i in range(n))
+    )
     only_ours = sorted(set(ours[0]) - set(theirs[0])) if n else []
     only_theirs = sorted(set(theirs[0]) - set(ours[0])) if n else []
     return {
@@ -127,6 +179,8 @@ def compare(ours: List[Dict[str, float]], theirs: List[Dict[str, float]]) -> Dic
         "max_abs_diff": diffs,
         "worst": max(diffs.items(), key=lambda kv: kv[1]) if diffs else None,
         "identical": all(d == 0.0 for d in diffs.values()) if diffs else False,
+        # Metrics that were NaN on both sides: agreement, but worth naming.
+        "nan_on_both_sides": nan_metrics,
         "metrics_only_in_ours": only_ours,
         "metrics_only_in_upstream": only_theirs,
     }
@@ -161,8 +215,19 @@ def check_parity(
     report["preset"] = preset
     report["seed"] = seed
     report["num_updates"] = num_updates
-    verdict = "IDENTICAL" if report["identical"] else f"DIFFERS (worst: {report['worst']})"
+    if report.get("error"):
+        verdict = f"INCONCLUSIVE - {report['error']}"
+    elif report["identical"]:
+        verdict = "IDENTICAL"
+    else:
+        verdict = f"DIFFERS (worst: {report['worst']})"
     print(f"parity[{preset}, seed {seed}] over {report['num_eval_steps']} eval steps: {verdict}")
+    if report.get("nan_on_both_sides"):
+        print(f"  (NaN on both sides, treated as agreement: {report['nan_on_both_sides']})")
+    if not report["identical"] and report.get("max_abs_diff"):
+        worst = sorted(report["max_abs_diff"].items(), key=lambda kv: -kv[1])[:5]
+        for key, value in worst:
+            print(f"    {key:<40} {value}")
     return report
 
 

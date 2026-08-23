@@ -150,8 +150,20 @@ def plot_per_level(df: pd.DataFrame, group: str = "run_name", last_k: int = 1, a
 
 
 def throughput(df: pd.DataFrame, group: str = "run_name") -> pd.DataFrame:
-    """Steps per second and the implied hours for a full 30k-update run."""
-    out = df.groupby(group).agg(sps=("sps", "median"), time_delta=("time_delta", "median"))
+    """Real steps/second and the implied hours for a full 30k-update run.
+
+    Note `sps` in the CSV is upstream's formula - cumulative env steps divided
+    by the last interval's wall time - which climbs throughout a run and is not
+    a rate. Prefer `steps_per_second`; fall back to deriving it from
+    `time_delta` for runs logged before that column existed.
+    """
+    agg = {"time_delta": ("time_delta", "median")}
+    if "steps_per_second" in df.columns:
+        agg["steps_per_second"] = ("steps_per_second", "median")
+    out = df.groupby(group).agg(**agg)
+    if "steps_per_second" not in out.columns:
+        interval_steps = 250 * 32 * 256  # eval_freq * num_train_envs * num_steps
+        out["steps_per_second"] = interval_steps / out["time_delta"]
     out["hours_per_30k_updates"] = out["time_delta"] * (30000 / 250) / 3600
     return out.reset_index()
 

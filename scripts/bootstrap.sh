@@ -55,7 +55,10 @@ uv venv --python 3.11 "$VENV"
 PY="$VENV/bin/python"
 
 "$PY" -m ensurepip --upgrade >/dev/null 2>&1 || true
-uv pip install --python "$PY" -r "$REPO_ROOT/requirements.txt"
+# constraints.txt bounds the nvidia-* CUDA wheels: jax 0.4.30 declares only
+# lower bounds on them, and the current releases (CUDA 12.9 / cuDNN 9.24)
+# segfault against a jaxlib built for CUDA ~12.4.
+uv pip install --python "$PY" -r "$REPO_ROOT/requirements.txt" --constraint "$REPO_ROOT/constraints.txt"
 uv pip install --python "$PY" --no-deps -e "$REPO_ROOT/third_party/jaxued"
 uv pip install --python "$PY" --no-deps -e "$REPO_ROOT"
 
@@ -63,6 +66,11 @@ uv pip install --python "$PY" --no-deps -e "$REPO_ROOT"
 # from a Jupyter kernel, MPLBACKEND points at matplotlib_inline, which does not
 # exist in this venv - force a headless backend.
 export MPLBACKEND=Agg
+# The image's profile puts /usr/local/cuda/lib64 on LD_LIBRARY_PATH for
+# interactive shells. Those system CUDA libraries shadow the pip CUDA wheels
+# jax was installed with, and a mismatched cuBLAS fails at the first matmul
+# with "INTERNAL: the library was not initialized".
+unset LD_LIBRARY_PATH
 
 "$PY" - <<'PYCHECK'
 from jaxued.environments import Maze  # the import that actually pulls gymnax in

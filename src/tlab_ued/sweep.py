@@ -53,8 +53,15 @@ def child_env(**overrides: str) -> Dict[str, str]:
     - `PYTHONPATH` / `PYTHONHOME` would splice the kernel's site-packages
       (numpy 2, a different jax) into the venv. Nothing here needs them:
       `tlab_ued` and `jaxued` are installed into the venv.
+    - `LD_LIBRARY_PATH` is set to `/usr/local/cuda/lib64` by the image's profile
+      on RunPod (interactive shells and tmux get it, plain `ssh cmd` does not).
+      That directory holds the *system* CUDA libraries, which shadow the pip
+      CUDA wheels jax was installed with; a cuBLAS 12.8 loaded into a jaxlib
+      built for 12.4 fails with `INTERNAL: the library was not initialized` on
+      the first matmul. Our jax gets its CUDA from pip wheels only.
     """
-    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
+    dropped = ("PYTHONPATH", "PYTHONHOME", "LD_LIBRARY_PATH")
+    env = {k: v for k, v in os.environ.items() if k not in dropped}
     env["MPLBACKEND"] = "Agg"
     env.setdefault("WANDB_MODE", "offline")
     env.setdefault("PYTHONUNBUFFERED", "1")
