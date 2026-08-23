@@ -1,0 +1,16 @@
+# runtime artefacts (regenerate on the pod, never commit)
+third_party/
+runs/
+checkpoints/
+results/
+wandb/
+venvs/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+
+# notebook outputs are stripped before committing (see README)

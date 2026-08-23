@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tlab-ued"
+version = "0.1.0"
+description = "Unsupervised Environment Design experiments on JaxUED mazes: frozen student, pluggable teacher"
+requires-python = ">=3.10"
+# Dependencies are intentionally NOT declared here. The assignment pins exact
+# versions (see requirements.txt) and jaxued itself is installed with
+# --no-deps from third_party/, so resolution must stay under our control.
+# Install with:  pip install -r requirements.txt && pip install --no-deps -e .
+dependencies = []
+
+[project.optional-dependencies]
+analysis = ["pandas", "matplotlib"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100

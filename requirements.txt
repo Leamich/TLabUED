@@ -1,0 +1,20 @@
+# Exact pins from docs/TASK.md. jaxued does not pin its own dependencies, so
+# these versions are the reproducibility contract - do not float them.
+jax[cuda12]==0.4.30
+flax==0.8.5
+chex==0.1.86
+optax==0.2.3
+distrax==0.1.5
+gymnax==0.0.8
+orbax-checkpoint==0.5.3
+numpy<2
+wandb==0.17.5
+pillow
+imageio
+# Only needed for --log_media all: wandb encodes eval animations from raw
+# numpy via moviepy.editor, which moviepy 2.x removed.
+moviepy<2
+
+# Analysis only (not needed to train).
+pandas
+matplotlib
