@@ -1,223 +1,541 @@
-# tlab_ued - Unsupervised Environment Design on JaxUED mazes
+# tlab_ued — Unsupervised Environment Design на лабиринтах JaxUED
 
-A frozen PPO+LSTM student, a **pluggable teacher**. This repo reproduces the three reference
-curricula from [`docs/TASK.md`](docs/TASK.md) - DR, PLR-perp and ACCEL - and provides the
-scaffolding to try better ones.
+Замороженный student (PPO+LSTM), сменный teacher. Репозиторий воспроизводит три референсных
+курикулума из [`docs/TASK.md`](docs/TASK.md) — DR, PLR⊥ и ACCEL — и предлагает два своих:
+**SFL-ACCEL** и **SFL-ORACLE**.
 
-Built on [JaxUED](https://github.com/DramaCow/jaxued), pinned at commit `0f8f128` and vendored
-unmodified into `third_party/`.
+Собрано на [JaxUED](https://github.com/DramaCow/jaxued), закреплённом на коммите `0f8f128` и
+вендоренном без изменений в `third_party/`.
 
-## Quickstart (RunPod A100, or any Linux box with a CUDA 12 driver)
+---
+
+## TL;DR
+
+Три сида на метод у `sfl_oracle` и `accel`, по одному у остальных веток. Основное число —
+среднее по последним 20 эвалам (обоснование выбора окна — в §11).
+
+| метод | сидов | held-out solve rate | sd |
+|---|---|---|---|
+| **`sfl_oracle`** (полный каскад) | 3 | **0.829** | 0.103 |
+| **`sfl_accel`** (SFL, фаза на 224 уровня) | 1 | **0.829** | — |
+| `accel` (MaxMC) | 3 | 0.648 | 0.072 |
+| `plr` (MaxMC) | 1 | 0.454 | — |
+| `dr` | 1 | 0.283 | — |
+
+Два вывода, и второй важнее первого.
+
+1. **Замена score-функции работает.** Learnability `p(1-p)` вместо MaxMC даёт **+0.18** held-out
+   solve rate над ACCEL при трёх сидах с каждой стороны и полностью одинаковом бюджете env-шагов.
+   Оба SFL-варианта бьют оба бейзлайна с запасом.
+2. **Предсказание learnability замещает её измерение, но не превосходит его.** Обученная модель
+   `p(solve | level)` позволяет срезать измерительные роллауты в 3.5 раза (3360 → 960 апдейтов) и
+   потратить освободившееся на градиенты — при этом качество ровно то же, что у полного измерения
+   (0.829 против 0.829). Что это *не* даёт — так это выигрыша сверх SFL.
+
+Что именно покупается, видно из трёх строк с одинаковым числом env-шагов:
+
+| | градиентных апдейтов | измерительных | held-out |
+|---|---|---|---|
+| `sfl_accel_cheap` — короткая фаза, без oracle | 14 399 | 960 | 0.731 |
+| `sfl_oracle` — короткая фаза, с oracle | 14 399 | 960 | **0.829** |
+| `sfl_accel` — длинная фаза, полное измерение | 13 199 | 3 360 | 0.829 |
+
+Укоротить фазу без oracle стоит 0.10 solve rate; oracle это возвращает. То есть ранжирование
+действительно подменяет измерение — но потолок ставит не оно.
+
+---
+
+## 1. Задача и что зафиксировано
+
+Качество меряется zero-shot: student, обученный только на уровнях от teacher'а, проверяется на
+восьми нарисованных руками уровнях (`SixteenRooms`, `SixteenRooms2`, `Labyrinth`,
+`LabyrinthFlipped`, `Labyrinth2`, `StandardMaze`, `StandardMaze2`, `StandardMaze3`), которых в
+обучении не было.
+
+Три ограничения из задания **проверяются кодом, а не запоминаются**:
+
+1. **Student заморожен.** `assert_student_frozen` запускается в начале каждого прогона и отвергает
+   любое отклонение от апстримных гиперпараметров PPO, бюджета и `agent_view_size`. Флаг
+   `--allow_student_changes` существует только для намеренных абляций и помечает прогон как
+   испорченный. Без этого сравнение курикулумов превратилось бы в подбор гиперпараметров RL.
+2. **Eval-уровни только измеряют.** Не используются ни в обучении, ни в подборе гиперпараметров,
+   ни как шаблоны для генерации.
+3. **Чекпоинты грузятся в харнесс организаторов**, который читает `loaded["params"]` в исходный
+   `ActorCritic`. Состояние teacher'а может ехать в чекпоинте рядом; архитектура политики — нет.
+   Проверяется каждым прогоном через немодифицированный апстримный `maze_plr.py --mode eval`.
+
+**Бюджет — это env-шаги, и он одинаков у всех.** 30000 апдейтов × 32 среды × 256 шагов =
+**245.76M шагов среды** в каждой строке любой таблицы; это подтверждено счётчиками самих прогонов
+(§8). Каждый апдейт — ровно один rollout. Различается только то, сколько апдейтов несут градиент,
+и это предмет исследования: измерение — накладной расход, а не обучение.
+
+---
+
+## 2. Бейзлайны и почему им можно верить
+
+| preset | апстримный эквивалент |
+|---|---|
+| `dr` | `python examples/maze_dr.py` |
+| `plr` | `python examples/maze_plr.py` (PLR⊥) |
+| `accel` | `python examples/maze_plr.py --use_accel` |
+
+DR сделан отдельным teacher'ом, а не «PLR с выключенным replay», потому что апстримный DR
+действительно другой: `AutoResetWrapper` и состояние среды, переносимое между апдейтами, против
+`AutoReplayWrapper` с ресетом на выбранный батч каждый апдейт.
 
 ```bash
-git clone <this repo> && cd tlab_ued
-bash scripts/bootstrap.sh          # clones jaxued @ pinned SHA, builds a 3.11 venv, installs the pins
+python -m tlab_ued.parity --presets dr plr accel --num_updates 500
 ```
 
-Then open [`notebooks/baseline.ipynb`](notebooks/baseline.ipynb), which walks the whole path:
-probe -> bootstrap -> smoke -> parity -> checkpoint compatibility -> full sweep -> plots.
+Запускает обе реализации в одном процессе на одном сиде и диффает каждый логируемый скаляр.
+Требуемый результат — совпадение до последнего бита. Это не формальность: дисциплина PRNG
+(`jax.random.split` той же арности и в том же порядке) — единственное, что отделяет
+«воспроизвели бейзлайн» от «получили другой алгоритм, похожий на бейзлайн».
 
-Or drive it from the shell:
+Прогнано на A100 после завершения всех прогонов (на свободной карте — CPU-версия этой проверки
+слабее):
+
+```
+parity[dr, seed 0] over 2 eval steps: IDENTICAL
+parity[plr, seed 0] over 2 eval steps: IDENTICAL
+parity[accel, seed 0] over 2 eval steps: IDENTICAL
+```
+
+Все три бейзлайна воспроизводят апстрим побитово. Это важно и потому, что работа над SFL и oracle
+трогала общие файлы (`scoring.py`, `teachers/base.py`, `logging_utils.py`): бейзлайны через них не
+ходят, но всё сравнение обесценилось бы, если бы они сдвинулись.
+
+---
+
+## 3. Диагностика домена: что вообще генерируется
+
+Этот раздел идёт до методов намеренно — он объясняет большую часть результатов ниже.
+
+Каждый прогон перед первым апдейтом делает BFS по выборке уровней своего генератора и мутатора и
+пишет отчёт в `runs/<run>/<seed>/level_diagnostics.json`. Поиск честный: по
+`(позиция, направление)` с действиями `left`/`right`/`forward`, с завершением так, как его
+завершает среда — шагом в клетку цели. Повороты стоят шага, цель непроходима, так что это не
+манхэттенское расстояние.
+
+`minigrid_walls`, 1024 уровня, `n_walls = 60`, эпизод 250 шагов:
+
+| | генератор | мутатор (одношаговые дети) |
+|---|---|---|
+| решаемых | 99.71% | 99.61% |
+| недостижимая цель | 0.29% | 0.39% |
+| не влезает в лимит шагов | 0.0% | 0.0% |
+| медиана оптимальных шагов | 11 | 11 |
+| p10 / p90 / max | 5 / 18 / 27 | 5 / 19 / 29 |
+| средний оптимальный return | 0.958 | 0.959 |
+| `trivial ≤10 шагов` | 44.6% | 45.0% |
+| `easy ≤30` | 55.1% | 54.6% |
+| `medium ≤60` / `hard ≤120` / `brutal >120` | **0% / 0% / 0%** | **0% / 0% / 0%** |
+
+Три следствия, каждое из которых всплывёт дальше:
+
+1. **Невыполнимых уровней почти нет** — 0.3%. Значит «learnability отсекает невозможные уровни» —
+   свойство, от которого я ожидал наибольшего эффекта, — здесь почти нечего отсекать. Всё, что
+   разделяет методы, происходит среди решаемых, и объяснять разницу «MaxMC любит замурованные
+   цели» было бы неправдой.
+2. **Потолок сложности низкий.** Максимум за 1024 уровня — 27 шагов при лимите эпизода 250,
+   медиана 11. Held-out уровни требуют маршрутов на порядок длиннее. То есть обучающее и целевое
+   распределения почти не пересекаются по сложности, и перенос обеспечивается не сходством
+   уровней, а тем, что политика выучила переносимое поведение.
+3. **Одношаговая мутация распределение не двигает.** Медиана детей — те же 11 шагов. Сложность
+   растёт не за одну мутацию, а **лестницей**: ребёнок остаётся в буфере, мутируется снова, и так
+   десятки раз. Видно по `level/mean_num_blocks`, которое за прогон растёт с ~25 до ~47.
+
+---
+
+## 4. В чём проблема score-функции
+
+Слабое место PLR и ACCEL — score-функция. В идеале она находит уровни на границе способностей
+student'а. На практике это прокси regret'а — positive value loss и MaxMC, — и, как разбирает
+Rutherford et al. 2024 (arXiv:2408.15099), ранжируют они не то.
+
+Классический аргумент против MaxMC — замурованная цель даёт большую и постоянную ошибку критика,
+так что невыполнимый уровень получает высокий score. По §3 таких уровней здесь 0.3%, поэтому
+**этот механизм не может быть источником наблюдаемой разницы**, и приписывать ему победу было бы
+нечестно. Что остаётся: MaxMC ранжирует по величине ошибки критика, а она растёт и на уровнях,
+которые student уже решает, но по которым критик плохо оценивает время до цели. Learnability же
+по построению обнуляется и на решённых, и на нерешаемых.
+
+SFL заменяет прокси на **learnability** — `p(1-p)`, где `p` — доля успехов при текущей политике.
+Максимум при `p = 0.5`.
+
+---
+
+## 5. SFL-ACCEL: learnability вместо MaxMC
+
+Реализация — [`teachers/sfl_accel.py`](src/tlab_ued/teachers/sfl_accel.py), score — `learnability`
+в [`scoring.py`](src/tlab_ued/scoring.py).
+
+Всё следует из одного факта: **`p` нельзя оценить по одному rollout'у.** Эпизод — 250 шагов,
+rollout — 256, каждая среда даёт один эпизод; `p_hat` равен 0 или 1, а `p_hat(1-p_hat)` в обоих
+случаях ноль. Наивная замена MaxMC на `p(1-p)` занулила бы все уровни. Поэтому:
+
+1. **Скоринг в несколько попыток.** При *оценке* 32 среды несут `32/k` различных уровней по `k`
+   раз каждый (`--sfl_num_attempts` = 4 → 8 уровней на апдейт). Тот же rollout, та же цена.
+2. **Бегущая оценка на replay.** Ветка replay оставлена точно как у ACCEL — 32 различных уровня,
+   одна попытка, градиент применяется, — так что распределение данных student'а не меняется. Её
+   одна бернуллиевская выборка подмешивается в хранимое `p`:
+   `p ← (1-decay)·p + decay·solved`, `decay = 0.25` (память ≈10 реплеев).
+3. **SFL-фаза.** Каждые 250 апдейтов 224 свежих случайных уровня оцениваются при замороженной
+   политике за 28 подряд идущих безградиентных апдейтов, топ-32 по learnability вставляются в
+   буфер. Единственное место, где уровень ранжируется против целой популяции.
+
+Оператор мутации ACCEL не тронут — просто «высокий score» теперь значит «student решает примерно в
+половине случаев», а не «критик про этот уровень путается».
+
+---
+
+## 6. SFL-ORACLE: предсказывать `p` вместо того, чтобы его покупать
+
+**Вопрос.** Score у SFL правильный, но `p` приходится *покупать*: 224 кандидата × 4 попытки — это
+28 безградиентных апдейтов каждые 250, и 224 — узкое окошко на пространстве `2^169` карт стен.
+Может ли маленькая модель *предсказывать* `p` достаточно хорошо, чтобы ранжировать популяцию в 36
+раз большую бесплатно и урезать бюджет измерений вчетверо?
+
+Два соображения, почему это не безнадёжно:
+
+* **Oracle видит то, чего не видит student.** Student получает окно 5×5 и LSTM. Oracle получает
+  уровень целиком — карту стен, цель, позу агента — и точное решение BFS.
+* **Измерение — оценка хуже, чем кажется.** При `k = 4` попытках `p_hat ∈ {0,.25,.5,.75,1}`,
+  поэтому `p_hat(1-p_hat)` принимает ровно **три** значения: 0, 0.1875, 0.25. «Топ-32 из 224» —
+  это в основном разрешение ничьей между всеми, кому выпало 2 из 4, порядком в массиве.
+
+Модель — [`oracle.py`](src/tlab_ued/oracle.py), teacher —
+[`teachers/sfl_oracle.py`](src/tlab_ued/teachers/sfl_oracle.py). Свёрточная сеть на 48 065
+параметров поверх 7 плоскостей уровня (стены, цель, агент, четыре плоскости направления в клетке
+агента) плюс четыре скаляра из `level_diagnostics.solve_levels` (оптимальные шаги, решаемость
+внутри эпизода, доля достижимой площади, плотность стен). Учится онлайн биномиальным NLL на
+метках, которые каждый rollout и так производит. Student не меняется; env-шагов это не стоит.
+
+Предсказание тратится в четырёх местах, по возрастанию требуемого доверия:
+
+1. **Фаза становится каскадом.** 8192 свежих уровня ранжируются по предсказанной learnability;
+   лучшие 64 играются; топ-32 по *измеренной* learnability попадают в буфер. Отбор 8192:64
+   предсказанием, затем 2:1 измерением, за 8 безградиентных апдейтов вместо 28. Ранжировать эти
+   8192 rollout'ами стоило бы 1024 апдейта на фазу — за 120 фаз вчетверо больше всего бюджета.
+2. **Контрольная группа делает это фальсифицируемым.** 16 из 64 берутся равномерно случайно и
+   измеряются в тех же апдейтах при той же политике. Отношение измеренной learnability выбранных к
+   контрольным — это эксперимент, который прогон ставит на себе сам 120 раз, а не допущение.
+3. **Буфер перескоривается бесплатно.** PLR-score настолько стар, насколько давно уровень
+   реплеили. Каждую фазу все 4000 записей перескориваются одним forward-проходом, так что уровень,
+   переставший быть обучающим 3000 апдейтов назад, перестаёт сэмплиться, не дожидаясь реплея.
+4. **Мутация перестаёт быть слепой.** Родитель порождает 8 детей, rollout получает тот, чьё
+   предсказание ближе к подбрасыванию монетки.
+
+**Warm-up.** Первые 1000 апдейтов ранжирование игнорируется, отбор равномерный. Голова
+инициализирована нулями, поэтому необученный oracle предсказывает 0.5 везде — не информативен, а
+не уверенно неправ.
+
+### Почему существует `sfl_accel_cheap`
+
+У `sfl_oracle` на 9% больше градиентных апдейтов, чем у `accel`, поэтому победа над одним ACCEL не
+сказала бы, отбирает ли каскад лучше или просто больше учится. `sfl_accel_cheap` — SFL с длиной
+фазы как у oracle и без oracle. **Oracle против cheap-SFL — это и есть чистое сравнение.**
+
+---
+
+## 7. Ветки эксперимента
+
+| preset | что меняет | что изолирует |
+|---|---|---|
+| `accel` | — | бейзлайн, который надо побить |
+| `sfl_accel` | learnability, фаза на 224 уровня | предыдущий эксперимент |
+| `sfl_accel_cheap` | фаза на 64 уровня | бюджетный близнец oracle |
+| `sfl_oracle` | полный каскад | метод |
+| `sfl_oracle_noverify` | без верифицирующих роллаутов | можно ли доверять oracle в одиночку? |
+| `sfl_oracle_bfs` | только признаки солвера | стоит ли выученный взгляд на карту чего-то сверх длины пути? |
+| `sfl_oracle_level` | только свёртки | может ли он выучить сложность, не получив путь готовым? |
+| `sfl_oracle_nomut` | слепая мутация | какая часть эффекта — управляемая мутация? |
+
+Три способа провала были записаны **до** запуска, с метрикой, различающей их: (1) oracle не
+предсказывает `p` — тогда метод вырождается в `sfl_accel_cheap`; (2) предсказывает, но
+learnability не переносится — gain высокий, held-out плоский; (3) выучивает только «достижима ли
+цель» — тогда `sfl_oracle_bfs` = `sfl_oracle`. Реализовался, как выяснилось, третий (§9.5).
+
+---
+
+## 8. Результаты
+
+### Held-out solve rate
+
+Среднее по последним 20 эвалам; в скобках — по последним 3, чтобы было видно, насколько окно
+влияет (§11).
+
+| метод | сидов | last-20 | sd | (last-3) |
+|---|---|---|---|---|
+| `sfl_oracle_nomut` | 1 | 0.890 | — | (0.842) |
+| `sfl_oracle_bfs` | 1 | 0.844 | — | (0.925) |
+| `sfl_accel` | 1 | 0.829 | — | (0.871) |
+| **`sfl_oracle`** | 3 | **0.829** | 0.103 | (0.938) |
+| `sfl_oracle_noverify` | 1 | 0.814 | — | (0.858) |
+| `sfl_accel_cheap` | 1 | 0.731 | — | (0.708) |
+| `sfl_oracle_level` | 1 | 0.667 | — | (0.858) |
+| `accel` | 3 | 0.648 | 0.072 | (0.718) |
+| `plr` | 1 | 0.454 | — | (0.454) |
+| `dr` | 1 | 0.283 | — | (0.275) |
+
+Сиды `sfl_oracle`: 0.915 / 0.715 / 0.857. Сиды `accel`: 0.570 / 0.661 / 0.711.
+
+### По уровням (среднее последних 20 эвалов, усреднение по сидам)
+
+| метод | 16Rooms | 16Rooms2 | Labyr | LabyrFlip | Labyr2 | StdMaze | StdMaze2 | StdMaze3 |
+|---|---|---|---|---|---|---|---|---|
+| `accel` | 0.900 | 0.332 | 0.888 | 0.742 | 0.778 | 0.405 | 0.617 | 0.518 |
+| `plr` | 0.850 | 0.455 | 0.965 | 0.425 | 0.415 | 0.030 | 0.435 | 0.060 |
+| `dr` | 0.895 | 0.195 | 0.000 | 0.390 | 0.000 | 0.485 | 0.030 | 0.265 |
+| `sfl_accel` | 0.895 | 0.705 | 0.775 | 0.870 | 0.765 | 0.890 | 0.745 | 0.990 |
+| `sfl_accel_cheap` | 0.885 | 0.775 | 0.835 | 0.775 | 0.480 | 0.885 | 0.390 | 0.820 |
+| **`sfl_oracle`** | 0.912 | 0.775 | 0.895 | 0.828 | 0.728 | 0.870 | 0.788 | 0.835 |
+| `sfl_oracle_bfs` | 0.980 | 0.745 | 0.840 | 0.965 | 0.340 | 0.985 | 0.970 | 0.930 |
+| `sfl_oracle_level` | 1.000 | 0.815 | 0.790 | 0.955 | 0.550 | **0.280** | 0.650 | **0.295** |
+| `sfl_oracle_nomut` | 0.735 | 0.885 | 0.850 | 1.000 | 0.855 | 0.935 | 0.890 | 0.970 |
+| `sfl_oracle_noverify` | 0.825 | 0.540 | 1.000 | 1.000 | 0.610 | 0.720 | 0.930 | 0.885 |
+
+### Бюджет, измеренный счётчиками прогонов
+
+| | env steps | апдейтов | DR | replay | мутация | фаза |
+|---|---|---|---|---|---|---|
+| `accel` | 245 760 000 | 30 000 | 3 333* | 13 333* | 13 333* | — |
+| `sfl_accel` | 245 760 000 | 30 000 | 242 | 13 199 | 13 199 | 3 360 |
+| `sfl_accel_cheap` | 245 760 000 | 30 000 | 242 | 14 399 | 14 399 | 960 |
+| `sfl_oracle` | 245 760 000 | 30 000 | 242 | 14 399 | 14 399 | 960 |
+| `sfl_oracle_noverify` | 245 760 000 | 30 000 | 250 | 14 875 | 14 875 | 0 |
+
+\* аналитические значения; ACCEL не логирует ветки отдельно. Env-шаги совпадают у всех до
+единицы — это и есть смысл «одинакового бюджета».
+
+### Пропускная способность
+
+Сравнивать её можно **только внутри одного пода**: часть прогонов сделана на RTX 4090 в одиночку,
+девять финальных — на A100 девятью параллельными процессами под CUDA MPS. На одной машине:
+
+| | шагов/с |
+|---|---|
+| `accel` (сид 2, тот же под) | 28 325 |
+| `sfl_oracle` (три сида) | 26 927 – 27 009 |
+
+То есть oracle стоит ~5% пропускной способности — заметно меньше, чем 27% из ранней пробы на
+свободной карте, потому что под MPS всё упирается в контention за GPU, а не в работу oracle.
+
+---
+
+## 9. Разбор: что механизм сделал на самом деле
+
+### 9.1. Oracle действительно отбирает — примерно вдвое лучше случайного
+
+Ключевая метрика: измеренная learnability 48 выбранных уровней против 16 равномерно случайных
+контролей, померенных теми же апдейтами при той же политике. 1.0 = выбор наугад.
+
+| сид | отношение средних | среднее пофазных отношений | selected | control |
+|---|---|---|---|---|
+| 0 | **1.96** | 1.14 | 0.0207 | 0.0105 |
+| 1 | **1.89** | 1.09 | 0.0194 | 0.0102 |
+| 2 | **1.81** | 1.05 | 0.0193 | 0.0106 |
+
+**Эти две колонки — оценки одной величины, и они расходятся вдвое.** Правая — то, что логируется
+как `oracle/selection_gain`, — систематически притянута к единице: в поздних фазах и числитель, и
+знаменатель почти нули, зафлоренное отношение шумит вокруг 1, и среднее по фазам эту массу шума
+считает наравне с ранними фазами, где сигнал есть. Левая устойчива по трём сидам (1.81–1.96) и
+говорит, что за прогон целиком oracle выбирает уровни вдвое обучающее случайных.
+
+Практический вывод для будущих экспериментов: **отношение средних, а не среднее отношений**, если
+знаменатель может обращаться в ноль.
+
+### 9.2. Эффект концентрируется в первой трети обучения
+
+Бины по прогону `sfl_oracle` сид 0:
+
+| update | 1750 | 3500 | 5250 | 7000 | 8750 | 10500 | 12250 | 14000 | 17500 |
+|---|---|---|---|---|---|---|---|---|---|
+| `selection_gain` (пофазно) | 1.18 | **3.04** | **2.85** | 1.91 | 1.65 | 0.76 | 1.21 | 0.58 | 0.80 |
+| `control_learnability` | 0.096 | 0.023 | 0.005 | 0.003 | 0.013 | 0.002 | 0.003 | 0.007 | 0.002 |
+| `predicted_learnability` | 0.207 | 0.199 | 0.149 | 0.129 | 0.129 | 0.097 | 0.095 | 0.082 | 0.097 |
+| `selected_learnability` | 0.099 | 0.065 | 0.036 | 0.025 | 0.022 | 0.009 | 0.014 | 0.007 | 0.009 |
+
+`control_learnability` — learnability случайно взятого уровня — падает с 0.096 до 0.002 за первые
+5000 апдейтов. К середине обучения **случайный уровень практически всегда решается**, и отбирать
+становится не из чего: 8192 предложения — это 8192 уровня с learnability ≈ 0.
+
+Причина — §3: генератор делает 44.6% тривиальных и 55.1% лёгких уровней, медиана 11 шагов,
+максимум 27. Ничего сложнее не существует. Ранжировать 8192 уровня вместо 224 не помогает, потому
+что это в 36 раз больше того же самого.
+
+**Проклятие победителя не уходит:** предсказанная learnability выбранных систематически в 6–10 раз
+выше реализованной (0.097 против 0.009 поздно). Argmax по предсказанию отбирает отчасти по ошибке
+предсказания — верифицирующая стадия существует ровно для того, чтобы это поглощать.
+
+### 9.3. Гейт-проба измерила единственный режим, где метод силён
+
+Перед тратой GPU метод проверялся пробой на 3000 апдейтов, давшей gain 2.77. Полный прогон это
+воспроизводит — 3.04 на апдейте 3500. Ошибкой было не измерение, а **экстраполяция**: 3000
+апдейтов — ровно тот участок, где случайные уровни ещё не решаются. Проба, которая по построению
+не могла увидеть деградацию, была принята за проверку метода.
+
+Урок: дешёвая проба валидирует механизм только в том режиме, в котором прогнана, а
+курикулум-методы по определению меняют режим по ходу обучения.
+
+### 9.4. Кажущийся парадокс: отличный Brier при нулевой ранговой корреляции
+
+`control_brier` мал (0.011–0.023), `control_rank_corr` около нуля (−0.023…+0.102). Противоречия
+нет — это подпись **вырожденного предиктора**: когда почти у всех уровней `p ≈ 1`, предсказание
+«≈1 везде» даёт прекрасную квадратичную ошибку и нулевую информацию о порядке. Низкий Brier здесь
+— свойство задачи, а не достижение модели, и брать его как доказательство калибровки нельзя.
+
+### 9.5. Признаки солвера несут почти весь сигнал
+
+Реализовался третий из заранее записанных режимов провала. `sfl_oracle_bfs` (только BFS-признаки,
+без свёрточной сети) даёт 0.844, полный метод — 0.829, `sfl_oracle_level` (только свёртки) — 0.667.
+
+По уровням это читается совсем чётко. Без BFS-признаков проваливаются ровно длинномаршрутные
+уровни: `StandardMaze` 0.280 и `StandardMaze3` 0.295 против 0.870 и 0.835 у полного метода — при
+том что на самом открытом уровне `SixteenRooms` версия без солвера лучшая (1.000). То есть
+свёртки выучивают «насколько уровень открытый», а длину маршрута — нет, и именно длина маршрута
+переносится на held-out.
+
+Это утверждение про генератор (§3: сложность здесь почти полностью описывается длиной пути), а не
+про метод вообще: в домене, где сложность не сводится к длине кратчайшего пути, вывод был бы другим.
+
+### 9.6. Фронтир садится на `p ≈ 0.75`, а не на 0.5
+
+`train/success_rate` — доля успехов на батче, на котором student реально учится:
+
+| | `sfl_accel` | `sfl_accel_cheap` | `sfl_oracle` |
+|---|---|---|---|
+| стационарное значение | 0.79–0.80 | 0.76–0.79 | 0.73–0.76 |
+
+Learnability симметрична вокруг 0.5, так что батч на `p = 0.8` стоит 0.16 вместо потолка 0.25.
+Причина — ветка replay: она сэмплит по *рангу* score'ов со `staleness_coeff = 0.3`, и уровень,
+чья хранимая оценка `p` уползла вверх, продолжает реплеиться, пока оценка не догонит.
+
+Oracle **сдвигает фронтир вниз** — 0.73–0.76 против 0.79–0.80: бесплатное перескоривание буфера
+убирает устаревшие уровни быстрее, чем это делает реплей. Но held-out-выигрыша сверх `sfl_accel`
+этот сдвиг не приносит, и это самостоятельный результат: **«ближе к `p = 0.5`» само по себе не
+лучше**, по крайней мере в этом диапазоне. Гипотеза SFL об оптимуме на 0.5 здесь не подтверждается.
+
+---
+
+## 10. Где выиграли по уровням и почему
+
+Устойчивый паттерн: **все методы решают открытые уровни, различаются они на длинных.**
+`SixteenRooms` берут все, включая DR (0.895). Разделение происходит на `StandardMaze` (ACCEL
+0.405, SFL-семейство 0.87–0.99), `StandardMaze3` (ACCEL 0.518, SFL 0.82–0.99) и `Labyrinth2`
+(DR 0.000).
+
+Это ровно та форма, которую ожидаешь, если курикулум сдвинулся к уровням, требующим длинного
+выдержанного маршрута: learnability держит в буфере уровни, которые student решает через раз, а
+таковыми к середине обучения остаются только длинные.
+
+Единственная систематическая потеря SFL — `SixteenRooms` у `sfl_accel` (0.895, но у `nomut` —
+0.735). Полный `sfl_oracle` этой потери не несёт (0.912): перескоривание буфера не даёт ему
+концентрироваться на одном структурном семействе.
+
+---
+
+## 11. Чему в этих числах нельзя верить
+
+Раздел обязательный, иначе таблицы читаются сильнее, чем заслуживают.
+
+1. **Выбор окна усреднения двигает выводы.** По последним 3 эвалам `sfl_oracle` даёт 0.938 и
+   выглядит победителем над `sfl_accel` (0.871); по последним 20 — 0.829 против 0.829, ничья. Один
+   и тот же прогон между соседними эвалами гуляет на ±0.2 (наблюдалось 0.80 → 0.69 → 0.84 подряд).
+   Восемь уровней × 30 попыток — маленькая выборка. **Все выводы в отчёте сделаны по окну в 20
+   эвалов**, и это решение принято до того, как числа были посмотрены; окно в 3 эвала показано
+   рядом именно чтобы читатель видел размер эффекта от этого выбора.
+2. **Разброс по сидам того же порядка, что эффекты.** `sfl_oracle`: 0.915 / 0.715 / 0.857
+   (sd 0.103). `accel`: 0.570 / 0.661 / 0.711 (sd 0.072). Разница методов 0.18 — это ~2.5 sem, то
+   есть эффект есть, но это не «в разы».
+3. **Все абляции — один сид.** Разницы между `nomut` (0.890), `bfs` (0.844), полным методом
+   (0.829) и `noverify` (0.814) **меньше, чем разброс по сидам самого метода**. Читать их можно
+   только как направление. Единственная абляция, чей эффект превышает шум, — `sfl_oracle_level`
+   (0.667), и она подкреплена интерпретируемым по-уровневым паттерном (§9.5).
+4. **`sfl_accel_cheap` — один сид.** Утверждение «oracle возвращает то, что теряет короткая фаза»
+   опирается на сравнение трёх сидов с одним. Это самая слабая опора в §TL;DR, и её стоило бы
+   укрепить вторым и третьим сидом cheap-SFL в первую очередь.
+5. **`steps_per_second` между подами несравним** (§8).
+
+---
+
+## 12. Что дальше
+
+Разбор указывает на генерацию, а не на отбор, поэтому и продолжения про неё:
+
+1. **Расширить генератор по длине пути.** `minigrid_walls` упирается в 27 шагов. Генератор с
+   длинными коридорами (или отбор по BFS-длине при генерации) дал бы фазе то, чего ей не хватает.
+   Это ровно тот момент, где oracle снова начал бы окупаться: ранжировать 8192 предложения имеет
+   смысл, когда среди них есть разнообразие.
+2. **Многошаговая мутация.** Раз одношаговый ребёнок неотличим от родителя, а сложность строится
+   лестницей — проверить `k`-шаговую мутацию с растущим `k`.
+3. **Oracle как генератор, а не как фильтр.** Градиент предсказания по карте стен указывает, *куда*
+   поставить стену, чтобы приблизить `p` к 0.5. Это превращает oracle из ранжировщика в оператор
+   направленного редактирования и обходит узкое место, о которое он споткнулся здесь.
+4. **Сиды для cheap-SFL и абляций** (§11.3–11.4) — прежде любых новых идей.
+
+---
+
+## 13. Как воспроизвести
+
+```bash
+git clone <этот репозиторий> && cd tlab_ued
+bash scripts/bootstrap.sh
+```
 
 ```bash
 PY=/workspace/venvs/jaxued/bin/python
 
-# one run
+# один прогон
 $PY -m tlab_ued.train --preset accel --seed 0 --out_dir /workspace/tlab_ued
 
-# the baseline sweep, detached and resumable
-$PY -m tlab_ued.sweep --presets dr plr accel --seeds 0 1 2 --out_dir /workspace/tlab_ued --wait
+# sweep, отсоединённый и возобновляемый
+$PY -m tlab_ued.sweep --jobs sfl_oracle:0 sfl_accel_cheap:0 --out_dir /workspace/tlab_ued --wait
 
-# what the curriculum is made of: solvable %, optimal-step distribution (no GPU needed)
+# из чего состоит курикулум (GPU не нужен)
 $PY -m tlab_ued.level_diagnostics --preset accel
 
-# evaluate a checkpoint on the held-out levels
-$PY -m tlab_ued.train --mode eval --checkpoint_directory /workspace/tlab_ued/checkpoints/accel_maxmc/0
-```
+# оценить чекпоинт на held-out уровнях
+$PY -m tlab_ued.train --mode eval --checkpoint_directory checkpoints/sfl_oracle_learnability_level_bfs/0
 
-A full run is 30000 updates (~245M env steps), roughly 1-3 hours on an A100.
+# таблицы и графики из metrics.csv
+python scripts/report.py --out_dir /workspace/tlab_ued
 
-## Layout
-
-```
-src/tlab_ued/
-  student.py      FROZEN - verbatim copy of upstream's PPO+LSTM student
-  teachers/       level-selection strategies: dr.py, plr.py, accel.py, <yours>.py
-  scoring.py      score-function registry - what "worth training on" means
-  oracle.py       learned p(solve | level), the sfl_oracle teacher's model
-  levels.py       level generator / mutator registry
-  level_diagnostics.py  BFS over generated levels: how many are solvable, and how hard
-  train.py        teacher-agnostic training loop, checkpointing, eval protocol
-  evaluate.py     checkpoint -> held-out solve rates
-  sweep.py        detached, resumable job queue
-  parity.py       our trainer vs upstream, same seed, diffed
-  analysis.py     metrics.csv -> tables and plots
-notebooks/baseline.ipynb
-scripts/bootstrap.sh
-```
-
-Outputs (all gitignored, all under `--out_dir`):
-
-```
-runs/<run_name>/<seed>/metrics.csv    one row per eval step - what the plots read
-runs/<run_name>/<seed>/meta.json      git SHAs, JAX version, GPU, full config
-runs/<run_name>/<seed>/train.log      stdout
-runs/<run_name>/<seed>/level_diagnostics.json   the launch-time BFS report
-checkpoints/<run_name>/<seed>/        orbax checkpoints + config.json - what gets submitted
-results/<run_name>/<seed>/            eval-mode outputs
-```
-
-## The rules this code enforces
-
-Three constraints from `docs/TASK.md` are load-bearing, so they are enforced rather than
-remembered:
-
-1. **The student is frozen.** `assert_student_frozen` runs at the top of every training run and
-   refuses any deviation from upstream's PPO hyperparameters, budget or `agent_view_size`.
-   `--allow_student_changes` exists for deliberate ablations and taints the run.
-2. **The held-out levels are for measurement only.** They are never used for training, tuning, or
-   as templates for generation. If you need a validation set, build a separate one.
-3. **Checkpoints must load in the graders' harness**, which restores untargeted and reads
-   `loaded["params"]` into the original `ActorCritic`. Teacher state may ride along in the
-   checkpoint; the policy architecture may not change. The notebook proves this each run by
-   evaluating our checkpoint with upstream's unmodified `maze_plr.py --mode eval`.
-
-## Baselines
-
-| preset | upstream equivalent |
-|---|---|
-| `dr` | `python examples/maze_dr.py` |
-| `plr` | `python examples/maze_plr.py` (PLR-perp: no exploratory gradient updates) |
-| `accel` | `python examples/maze_plr.py --use_accel` |
-
-Plus our own, which has no upstream counterpart:
-
-| preset | what it is |
-|---|---|
-| `sfl_accel` | ACCEL with SFL's learnability score in place of MaxMC ([docs/experiments/sfl_accel.md](docs/experiments/sfl_accel.md)) |
-| `sfl_accel_nophase` | the ablation: learnability scoring, no evaluation phase |
-| `sfl_accel_cheap` | SFL with a 64-level phase - the budget twin of `sfl_oracle`, and its control |
-| `sfl_oracle` | SFL-ACCEL with a learned model of `p(solve \| level)` ranking the candidates ([docs/experiments/sfl_oracle.md](docs/experiments/sfl_oracle.md)) |
-| `sfl_oracle_noverify` | the aggressive arm: insert on prediction alone, no verification rollouts |
-| `sfl_oracle_level` / `sfl_oracle_bfs` | feature ablations: the map without the solver, the solver without the map |
-| `sfl_oracle_nomut` | the oracle drives the phase but not the mutation operator |
-
-DR is a separate teacher rather than "PLR with replay off" because upstream's DR genuinely differs:
-it wraps the env in `AutoResetWrapper` and carries env state across updates, where PLR/ACCEL use
-`AutoReplayWrapper` and reset onto a chosen batch of levels each update.
-
-Fidelity is checked, not assumed:
-
-```bash
+# тесты и побитовая сверка с апстримом
+$PY -m pytest tests -q
 $PY -m tlab_ued.parity --presets dr plr accel --num_updates 500
 ```
 
-runs both implementations in-process on the same seed and diffs every logged scalar. Expected
-output: identical, to the last bit.
+Полный прогон — 30000 апдейтов (~245M env-шагов), ~2.5 часа на A100 (девять параллельно под MPS).
 
-## SFL-ACCEL
+### Структура
 
-Our method. `p(1-p)` over a level's success rate (Rutherford et al., 2024) decides what enters the
-level buffer; ACCEL's mutation operator evolves it from there. Because a single rollout gives one
-episode per level - and `p(1-p)` of a single Bernoulli sample is exactly 0 either way - levels are
-scored with several attempts each (the 32 envs carry `32/k` distinct levels), replayed levels carry
-a decaying running estimate of `p`, and every `--sfl_period` updates a phase evaluates a large batch
-of fresh random levels at a frozen policy and keeps the most learnable.
-
-The phase is paid for out of the frozen budget, not added to it: it costs what ACCEL spends on its
-DR branch, and `--replay_prob 1.0` keeps the count of *gradient* updates within 0.1% of ACCEL's.
-Every run prints its expected budget split before the first update and logs the actual branch
-counts to `metrics.csv`:
-
-```bash
-$PY -m tlab_ued.sweep --jobs accel:1 sfl_accel:0 --out_dir /workspace/tlab_ued --wait
+```
+src/tlab_ued/
+  student.py      ЗАМОРОЖЕН - дословная копия апстримного PPO+LSTM
+  teachers/       стратегии отбора уровней: dr.py, plr.py, accel.py, sfl_accel.py, sfl_oracle.py
+  scoring.py      реестр score-функций
+  oracle.py       обучаемая модель p(solve | level)
+  levels.py       реестр генераторов и мутаторов
+  level_diagnostics.py  BFS по генерируемым уровням
+  train.py        teacher-агностичный цикл обучения, чекпоинты, протокол оценки
+  parity.py       наш тренер против апстримного, тот же сид, диффом
+  analysis.py     metrics.csv -> таблицы и графики
 ```
 
-Curriculum diagnostics land in the CSV alongside the solve rates: `train/success_rate` (how hard
-the levels being trained on actually are), `sfl/topk_learnability` vs `sfl/population_learnability`
-(how much the phase's selection is buying), `level_sampler/mean_p`, and `branch/num_*_updates`.
+Артефакты: `runs/<run>/<seed>/metrics.csv`, `checkpoints/<run>/<seed>/`,
+`results/summary.md`, `results/figs/`.
 
-## SFL-ORACLE
+---
 
-SFL's cost is measurement: to know a level's `p` it has to play the level, which is 28 of every 250
-updates and still only 224 candidates. `sfl_oracle` adds a small convnet that *predicts* `p` from
-the whole level - wall map, goal, agent pose, and the exact BFS solution, none of which the
-partially-observing student can see - trained online on the labels every rollout already produces
-([`src/tlab_ued/oracle.py`](src/tlab_ued/oracle.py)).
+## 14. Ссылки
 
-The phase becomes a cascade: 8192 fresh levels ranked for free, the best 64 played, the top 32 by
-*measured* learnability kept. Eight of those 64 are drawn uniformly at random, which makes every
-phase a controlled experiment on the oracle - `oracle/selection_gain` is how much more learnable
-its picks were than levels nobody picked. The same predictions also re-score the whole level buffer
-each phase and pick which of 8 mutation candidates a parent gets to spend a rollout on.
-
-```bash
-$PY -m tlab_ued.sweep --jobs sfl_oracle:0 sfl_accel_cheap:0 --out_dir /workspace/tlab_ued --wait
-```
-
-`sfl_accel_cheap` is the control: identical budget, identical phase length, no oracle. Read
-[docs/experiments/sfl_oracle.md](docs/experiments/sfl_oracle.md) for the arms and what each one
-isolates.
-
-## Level diagnostics
-
-Every training run starts by BFS-ing a sample of the levels its teacher will generate, and prints
-what it found before the first update:
-
-* **solvable %** - split into "the goal is walled off" and "the optimal solution is longer than
-  the 250-step episode". Both are levels the student cannot learn from, but they have different
-  causes.
-* **optimal steps** - the true minimum number of *env* steps, searched over `(position,
-  direction)` with `left` / `right` / `forward`, ending the way the env ends an episode: by
-  stepping into the goal cell. Turning costs a step, and the goal is not walkable, so this is not
-  the grid distance.
-* **best return** - what that optimal play is worth under the env's time penalty
-  (`1 - 0.9 * steps / 250`), i.e. the ceiling on `return/mean` for that distribution.
-* **difficulty buckets, reachable area, wall count** - the shape of the distribution, not just its
-  mean. A curriculum drifting into "trivial" or into "unsolvable" is visible here long before the
-  eval curve reacts.
-
-For a mutation teacher (ACCEL) the same report is printed for the mutated children, which is how
-you tell a mutation operator that ratchets difficulty up from one that mostly seals goals off.
-
-The report goes to stdout and to `runs/<run_name>/<seed>/level_diagnostics.json`. It draws from
-its own PRNG key, so `--diagnose_levels 0` (off) and `--diagnose_levels 8192` produce
-bit-identical training runs. Run it standalone to compare generator settings without training:
-
-```bash
-$PY -m tlab_ued.level_diagnostics --preset accel --n_walls 60 --diagnose_levels 8192
-```
-
-## Adding an idea
-
-1. **A new score function** - `scoring.py`, `@register_score_fn("my_score")`, then
-   `--score_function my_score`. It receives a `RolloutSignals` bundle (obs, actions, log-probs,
-   values, advantages, targets, returns, levels), not just the two arrays MaxMC and PVL use.
-2. **A new curriculum** - `teachers/my_idea.py`, subclass `Teacher`, register in
-   `teachers/__init__.py`, then `--teacher my_idea`. Whatever memory it needs goes in
-   `teacher_state`, an opaque pytree carried through the loop and the checkpoint.
-3. **A new level generator or mutator** - `levels.py`, `@register_generator` / `@register_mutator`.
-
-Add a preset in `config.py` and the sweep, parity, evaluation and plotting machinery all apply
-unchanged.
-
-## Tests
-
-```bash
-$PY -m pytest tests -q
-```
-
-`tests/test_sfl_accel.py` covers the learnability score, the budget arithmetic against ACCEL's,
-and a CPU run through every SFL branch; `tests/test_config.py` covers the freeze guard and config
-round-trips;
-`tests/test_level_diagnostics.py` checks the BFS against a brute-force search over the real
-`Maze.step_env` transitions; `tests/test_teachers.py`
-runs each teacher for a few updates on a tiny config and checks that a written checkpoint reads
-back with the expected parameter shapes.
-
-## Notes
-
-- Logging defaults to `WANDB_MODE=offline`: no API key needed mid-run, and every scalar is
-  mirrored to `metrics.csv`. `wandb sync runs/.../wandb/offline-*` uploads later if wanted.
-- Notebook outputs should be stripped before committing:
-  `jupyter nbconvert --clear-output --inplace notebooks/baseline.ipynb`.
+1. Dennis et al., 2020 — *Emergent Complexity and Zero-shot Transfer via Unsupervised Environment
+   Design*, arXiv:2012.02096. Постановка UED и minimax regret.
+2. Jiang et al., 2021 — *Replay-Guided Adversarial Environment Design*, arXiv:2110.02439. PLR⊥.
+3. Parker-Holder et al., 2022 — *Evolving Curricula with Regret-Based Environment Design*,
+   arXiv:2203.01302. ACCEL; оператор мутации используется без изменений.
+4. Rutherford et al., 2024 — *No Regrets: Investigating and Improving Regret Approximations in
+   UED*, arXiv:2408.15099. Критика score-функций и SFL; отсюда learnability `p(1-p)` и идея фазы
+   отбора по популяции.
+5. Coward et al., 2024 — *JaxUED*, arXiv:2403.13091. Кодовая база.

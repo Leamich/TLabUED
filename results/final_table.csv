@@ -1,0 +1,11 @@
+run_name,mean,std,count,sem
+sfl_oracle_learnability_level_bfs,0.9375000066227382,0.06166103403361293,3,0.0356000145978171
+sfl_oracle_learnability_bfs,0.925000011920929,,1,
+sfl_accel_learnability,0.8708333373069763,,1,
+sfl_oracle_learnability_level,0.8583333492279053,,1,
+sfl_oracle_learnability_level_bfs_noverify,0.8583333293596903,,1,
+sfl_oracle_learnability_level_bfs_nomut,0.8416666785875956,,1,
+accel_maxmc,0.7180555595291985,0.08910564241507091,3,0.051445166634655724
+sfl_accel_learnability_n64,0.7083333134651184,,1,
+plr_maxmc,0.45416667064030963,,1,
+dr,0.27500001092751813,,1,

@@ -1,0 +1,11 @@
+run_name,SixteenRooms,SixteenRooms2,Labyrinth,LabyrinthFlipped,Labyrinth2,StandardMaze,StandardMaze2,StandardMaze3
+accel_maxmc,0.967,0.522,0.867,0.844,0.833,0.411,0.844,0.456
+dr,0.733,0.367,0.0,0.3,0.0,0.5,0.0,0.3
+plr_maxmc,0.967,0.5,0.967,0.033,0.733,0.133,0.233,0.067
+sfl_accel_learnability,0.7,0.633,0.867,1.0,0.8,0.967,1.0,1.0
+sfl_accel_learnability_n64,0.833,0.667,0.633,1.0,0.667,0.933,0.067,0.867
+sfl_oracle_learnability_bfs,1.0,0.733,1.0,1.0,0.767,1.0,0.9,1.0
+sfl_oracle_learnability_level,1.0,0.967,1.0,0.933,1.0,0.567,1.0,0.4
+sfl_oracle_learnability_level_bfs,0.989,0.944,0.967,1.0,0.9,0.911,0.833,0.956
+sfl_oracle_learnability_level_bfs_nomut,0.867,0.767,0.733,1.0,0.7,1.0,0.7,0.967
+sfl_oracle_learnability_level_bfs_noverify,0.6,0.867,1.0,1.0,0.767,0.7,0.967,0.967
