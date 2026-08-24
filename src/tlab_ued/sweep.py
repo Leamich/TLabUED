@@ -240,6 +240,16 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser = argparse.ArgumentParser(description="Run a queue of training jobs")
     parser.add_argument("--presets", nargs="+", default=list(BASELINE_PRESETS))
     parser.add_argument("--seeds", nargs="+", type=int, default=[0])
+    parser.add_argument(
+        "--jobs",
+        nargs="+",
+        default=None,
+        metavar="PRESET:SEED",
+        help=(
+            "explicit preset/seed pairs, instead of the presets x seeds product "
+            "(e.g. --jobs accel:1 sfl_accel:0)"
+        ),
+    )
     parser.add_argument("--out_dir", type=str, default=".")
     parser.add_argument("--max_parallel", type=int, default=1)
     parser.add_argument("--mem_fraction", type=float, default=None)
@@ -248,7 +258,11 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument("--status", action="store_true", help="print status and exit")
     args = parser.parse_args(argv)
 
-    jobs = [Job(preset=p, seed=s) for s in args.seeds for p in args.presets]
+    if args.jobs:
+        jobs = [Job(preset=spec.rsplit(":", 1)[0], seed=int(spec.rsplit(":", 1)[1]))
+                for spec in args.jobs]
+    else:
+        jobs = [Job(preset=p, seed=s) for s in args.seeds for p in args.presets]
     common = {"out_dir": args.out_dir, "smoke": args.smoke}
 
     if args.status:

@@ -97,8 +97,76 @@ EXTRA_DEFAULTS: Dict[str, Any] = {
     "out_dir": ".",
     # continue from the latest checkpoint of this run, if one exists
     "resume": False,
+    # BFS sanity check on the training distribution, printed before the run and
+    # written to <run_dir>/level_diagnostics.json: how many generated levels are
+    # solvable at all, and how hard the solvable ones are. 0 turns it off. It
+    # draws from its own PRNG key, so it never shifts the training stream.
+    "diagnose_levels": 1024,
+    # how many rounds of the mutator to apply before diagnosing the children
+    # (mutation teachers only)
+    "diagnose_mutation_rounds": 1,
     # bypass the student-freeze guard (deliberate ablations only)
     "allow_student_changes": False,
+    # === SFL (teacher `sfl_accel`; see teachers/sfl_accel.py) ===
+    # How many attempts each level gets when it is scored. The 32 envs of an
+    # update carry num_train_envs/k distinct levels, so this costs nothing extra
+    # - it trades levels-per-update for a success rate that is not 0 or 1.
+    "sfl_num_attempts": 4,
+    # Updates between the start of one SFL evaluation phase and the next; 0
+    # disables the phase and leaves learnability scoring on the ACCEL branches
+    # (the ablation that separates "learnability" from "SFL").
+    "sfl_period": 250,
+    # Levels evaluated per phase, and how many of them are kept. 224 * 4 / 32 =
+    # 28 updates per phase, 120 phases over a full run: 11.2% of the budget,
+    # which is what ACCEL spends on its DR branch.
+    "sfl_num_levels": 224,
+    "sfl_topk": 32,
+    # Weight of the newest observation in a replayed level's running success
+    # rate. 0.25 forgets over ~10 replays, which is what keeps a buffer entry's
+    # score tracking the policy instead of the policy it was measured against.
+    "sfl_p_decay": 0.25,
+    # === Learnability oracle (teacher `sfl_oracle`; see oracle.py) ===
+    # What the oracle is allowed to look at: "level" is the raw map through a
+    # convnet, "bfs" is the exact solver's summary (optimal steps, solvable,
+    # reachable area, wall density) with no vision at all, "level_bfs" is both.
+    # The three are an ablation ladder: what does predicting `p` actually need?
+    "oracle_features": "level_bfs",
+    "oracle_hidden": 64,
+    "oracle_lr": 3e-4,
+    # Adam steps per training update, and the minibatch each one draws from the
+    # ring of recent observations. Small on purpose: the oracle has to chase a
+    # moving policy, and it must not become a noticeable share of the wall clock.
+    "oracle_train_steps": 2,
+    "oracle_batch_size": 256,
+    # How many (level, solved) observations the oracle remembers. 8192 is roughly
+    # the last 300 updates - old enough to be plentiful, recent enough that the
+    # policy that produced it is still approximately this one.
+    "oracle_buffer_capacity": 8192,
+    # Levels ranked per phase before any of them is played. This is the number
+    # that measurement could never afford: 8192 rollout-scored levels would cost
+    # 1024 updates, ranking them costs one forward pass.
+    "oracle_num_proposals": 8192,
+    # Of the `sfl_num_levels` the phase verifies, how many are drawn uniformly
+    # rather than from the top of the ranking. They are the control group that
+    # makes `oracle/selection_gain` a measurement rather than a hope - and the
+    # only sample on which the oracle's ranking can be scored without range
+    # restriction, since it picked the other 48 to all look alike. 8 was too few:
+    # in the 3000-update probe whole control groups scored zero learnability,
+    # which makes the gain ratio undefined for that phase.
+    "oracle_control_levels": 16,
+    # Children generated per parent on a mutation update; the one predicted most
+    # learnable is the one played. 1 restores ACCEL's blind single edit.
+    "oracle_mutation_proposals": 8,
+    # Re-score the whole level buffer with the oracle at each phase, so an entry's
+    # priority stops depending on how long ago it was last replayed.
+    "oracle_rescore_buffer": True,
+    # Play the oracle's shortlist before inserting it (the cascade). Turning this
+    # off inserts on prediction alone and returns the phase's updates to the
+    # student - the aggressive arm.
+    "oracle_verify": True,
+    # Updates before the oracle's ranking is used at all; until then selections
+    # are uniform random, which is what an uninformative model should do.
+    "oracle_warmup_updates": 1000,
 }
 
 DEFAULTS: Dict[str, Any] = {
@@ -107,6 +175,36 @@ DEFAULTS: Dict[str, Any] = {
     **TEACHER_KNOBS,
     **EXTRA_DEFAULTS,
 }
+
+def _oracle_presets() -> Dict[str, Dict[str, Any]]:
+    """`sfl_oracle` and the four ablations that take it apart.
+
+    The base arm is the cascade: 8192 proposals ranked by the oracle, 64 played,
+    32 kept. Each ablation removes exactly one mechanism, so a difference in the
+    final solve rate has one candidate explanation rather than five.
+    """
+    base = {
+        "teacher": "sfl_oracle",
+        "use_accel": True,
+        "exploratory_grad_updates": False,
+        "score_function": "learnability",
+        "replay_prob": 1.0,
+        # The verified shortlist: a seventh of what `sfl_accel` plays per phase.
+        "sfl_num_levels": 64,
+    }
+    return {
+        "sfl_oracle": base,
+        # No verification: insert on prediction alone and give the phase's updates
+        # back to the student.
+        "sfl_oracle_noverify": {**base, "oracle_verify": False},
+        # Feature ablations: is a convnet over the map needed, or is the solver's
+        # summary of it enough - or vice versa?
+        "sfl_oracle_level": {**base, "oracle_features": "level"},
+        "sfl_oracle_bfs": {**base, "oracle_features": "bfs"},
+        # ACCEL's blind mutation, with the oracle still driving the phase.
+        "sfl_oracle_nomut": {**base, "oracle_mutation_proposals": 1},
+    }
+
 
 # === Presets ===
 # Each baseline preset is one upstream command expressed as overrides.
@@ -121,6 +219,39 @@ PRESETS: Dict[str, Dict[str, Any]] = {
     # python examples/maze_plr.py --exploratory_grad_updates (non-robust PLR)
     "plr_exploratory": {"teacher": "plr", "exploratory_grad_updates": True},
     "accel_exploratory": {"teacher": "accel", "use_accel": True, "exploratory_grad_updates": True},
+    # Ours: ACCEL with SFL's learnability score (Rutherford et al., 2024) in
+    # place of MaxMC. `replay_prob=1.0` is what keeps the budget matched to
+    # ACCEL's - the SFL phase replaces the DR branch rather than adding to it, so
+    # outside a phase every update is a replay or its mutation, and the count of
+    # *gradient* updates lands within 0.1% of ACCEL's. See teachers/sfl_accel.py.
+    "sfl_accel": {
+        "teacher": "sfl_accel",
+        "use_accel": True,
+        "exploratory_grad_updates": False,
+        "score_function": "learnability",
+        "replay_prob": 1.0,
+    },
+    # The ablation: learnability everywhere, but no evaluation phase.
+    "sfl_accel_nophase": {
+        "teacher": "sfl_accel",
+        "use_accel": True,
+        "exploratory_grad_updates": False,
+        "score_function": "learnability",
+        "sfl_period": 0,
+    },
+    # SFL with the oracle's phase *cost* but none of its machinery: 64 measured
+    # candidates instead of 224. The budget twin of `sfl_oracle`, and the control
+    # that separates "the cascade selects better" from "the shorter phase leaves
+    # more updates for the student".
+    "sfl_accel_cheap": {
+        "teacher": "sfl_accel",
+        "use_accel": True,
+        "exploratory_grad_updates": False,
+        "score_function": "learnability",
+        "replay_prob": 1.0,
+        "sfl_num_levels": 64,
+    },
+    **_oracle_presets(),
 }
 
 BASELINE_PRESETS = ("dr", "plr", "accel")
@@ -215,7 +346,85 @@ def build_parser() -> argparse.ArgumentParser:
         "--log_media", type=str, default=DEFAULTS["log_media"], choices=["all", "levels", "none"]
     )
     _bool_flag(p, "resume", DEFAULTS["resume"], "continue from the latest checkpoint of this run")
+    p.add_argument(
+        "--diagnose_levels",
+        type=int,
+        default=DEFAULTS["diagnose_levels"],
+        help="BFS-diagnose this many generated levels before training (0 = off)",
+    )
+    p.add_argument(
+        "--diagnose_mutation_rounds",
+        type=int,
+        default=DEFAULTS["diagnose_mutation_rounds"],
+        help="rounds of the mutator to apply before diagnosing the children",
+    )
     _bool_flag(p, "allow_student_changes", DEFAULTS["allow_student_changes"])
+    # === SFL (ours) ===
+    sfl = p.add_argument_group("SFL teacher")
+    sfl.add_argument(
+        "--sfl_num_attempts",
+        type=int,
+        default=DEFAULTS["sfl_num_attempts"],
+        help="attempts per level when scoring; num_train_envs must be divisible by it",
+    )
+    sfl.add_argument(
+        "--sfl_period",
+        type=int,
+        default=DEFAULTS["sfl_period"],
+        help="updates between SFL evaluation phases (0 = no phase)",
+    )
+    sfl.add_argument(
+        "--sfl_num_levels",
+        type=int,
+        default=DEFAULTS["sfl_num_levels"],
+        help="levels evaluated per phase (for sfl_oracle: the shortlist it verifies)",
+    )
+    sfl.add_argument("--sfl_topk", type=int, default=DEFAULTS["sfl_topk"])
+    sfl.add_argument("--sfl_p_decay", type=float, default=DEFAULTS["sfl_p_decay"])
+
+    # === Learnability oracle (ours) ===
+    from tlab_ued.oracle import FEATURE_SETS
+
+    orc = p.add_argument_group("Learnability oracle")
+    orc.add_argument(
+        "--oracle_features",
+        type=str,
+        default=DEFAULTS["oracle_features"],
+        choices=sorted(FEATURE_SETS),
+        help="what the oracle sees: the map, the BFS solution, or both",
+    )
+    orc.add_argument("--oracle_hidden", type=int, default=DEFAULTS["oracle_hidden"])
+    orc.add_argument("--oracle_lr", type=float, default=DEFAULTS["oracle_lr"])
+    orc.add_argument("--oracle_train_steps", type=int, default=DEFAULTS["oracle_train_steps"])
+    orc.add_argument("--oracle_batch_size", type=int, default=DEFAULTS["oracle_batch_size"])
+    orc.add_argument(
+        "--oracle_buffer_capacity", type=int, default=DEFAULTS["oracle_buffer_capacity"]
+    )
+    orc.add_argument(
+        "--oracle_num_proposals",
+        type=int,
+        default=DEFAULTS["oracle_num_proposals"],
+        help="levels ranked per phase before any is played",
+    )
+    orc.add_argument(
+        "--oracle_control_levels",
+        type=int,
+        default=DEFAULTS["oracle_control_levels"],
+        help="uniformly drawn levels inside the verified shortlist (the control group)",
+    )
+    orc.add_argument(
+        "--oracle_mutation_proposals",
+        type=int,
+        default=DEFAULTS["oracle_mutation_proposals"],
+        help="children generated per parent; 1 is ACCEL's blind mutation",
+    )
+    _bool_flag(orc, "oracle_rescore_buffer", DEFAULTS["oracle_rescore_buffer"])
+    _bool_flag(
+        orc, "oracle_verify", DEFAULTS["oracle_verify"], "play the shortlist before inserting it"
+    )
+    orc.add_argument(
+        "--oracle_warmup_updates", type=int, default=DEFAULTS["oracle_warmup_updates"]
+    )
 
     group = p.add_argument_group("Training params")
     # === PPO (frozen) ===
@@ -269,12 +478,28 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def default_run_name(config: Dict[str, Any]) -> str:
-    """Run name from the teacher-side settings that actually distinguish runs."""
+    """Run name from the teacher-side settings that actually distinguish runs.
+
+    Ablations of the same teacher must not collide: two runs sharing a name share
+    a directory, and the sweep runner would call the second one already finished.
+    So anything a preset varies has to show up here.
+    """
     name = str(config["teacher"])
     if config["teacher"] != "dr":
         name += f"_{str(config['score_function']).lower()}"
         if config.get("exploratory_grad_updates"):
             name += "_expl"
+    if config["teacher"] in ("sfl_accel", "sfl_oracle") and not config.get("sfl_period"):
+        name += "_nophase"
+    elif config["teacher"] == "sfl_accel":
+        if config.get("sfl_num_levels") != EXTRA_DEFAULTS["sfl_num_levels"]:
+            name += f"_n{config['sfl_num_levels']}"
+    elif config["teacher"] == "sfl_oracle":
+        name += f"_{config.get('oracle_features', '')}"
+        if not config.get("oracle_verify", True):
+            name += "_noverify"
+        if int(config.get("oracle_mutation_proposals", 1)) <= 1:
+            name += "_nomut"
     return name
 
 
@@ -296,6 +521,18 @@ def finalize(config: Dict[str, Any]) -> Dict[str, Any]:
             f"num_updates ({config['num_updates']}) must be a multiple of eval_freq "
             f"({config['eval_freq']}): the loop runs num_updates // eval_freq times."
         )
+    # Sizing errors here would otherwise surface as a shape mismatch inside a
+    # jitted branch, minutes into a run.
+    if config.get("teacher") == "sfl_accel":
+        from tlab_ued.teachers.sfl_accel import validate as validate_sfl
+
+        validate_sfl(config)
+    if config.get("teacher") == "sfl_oracle":
+        from tlab_ued.teachers.sfl_accel import validate as validate_sfl
+        from tlab_ued.teachers.sfl_oracle import validate as validate_oracle
+
+        validate_sfl(config)
+        validate_oracle(config)
     return config
 
 

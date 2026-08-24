@@ -26,7 +26,13 @@ import jax.numpy as jnp
 from jaxued.utils import compute_max_returns
 from jaxued.wrappers import AutoReplayWrapper
 
-from tlab_ued.teachers.base import BranchFn, Teacher, TrainState, make_level_sampler
+from tlab_ued.teachers.base import (
+    BranchFn,
+    Teacher,
+    TrainState,
+    branch_budget,
+    make_level_sampler,
+)
 
 
 class UpdateState(IntEnum):
@@ -185,6 +191,10 @@ class PLRTeacher(Teacher):
         return (rng, train_state), metrics
 
     # --- reporting -------------------------------------------------------------
+    def startup_report(self) -> Dict[str, Any]:
+        """How the budget is expected to split across branches."""
+        return branch_budget(self.config)
+
     def log_dict(self, train_state: TrainState) -> Dict[str, Dict[str, Any]]:
         """Level-buffer health, exactly as upstream's `train_state_to_log_dict`."""
         ts = train_state.teacher_state

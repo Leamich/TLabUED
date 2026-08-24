@@ -161,9 +161,14 @@ def throughput(df: pd.DataFrame, group: str = "run_name") -> pd.DataFrame:
     if "steps_per_second" in df.columns:
         agg["steps_per_second"] = ("steps_per_second", "median")
     out = df.groupby(group).agg(**agg)
+    interval_steps = 250 * 32 * 256  # eval_freq * num_train_envs * num_steps
+    derived = interval_steps / out["time_delta"]
     if "steps_per_second" not in out.columns:
-        interval_steps = 250 * 32 * 256  # eval_freq * num_train_envs * num_steps
-        out["steps_per_second"] = interval_steps / out["time_delta"]
+        out["steps_per_second"] = derived
+    else:
+        # Mixing runs logged before and after that column existed: the old ones
+        # would otherwise be a silent NaN in the middle of the table.
+        out["steps_per_second"] = out["steps_per_second"].fillna(derived)
     out["hours_per_30k_updates"] = out["time_delta"] * (30000 / 250) / 3600
     return out.reset_index()
 

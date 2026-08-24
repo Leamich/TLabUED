@@ -4,7 +4,9 @@ Layout:
     student.py     frozen PPO+LSTM student (verbatim from upstream)
     teachers/      level-selection strategies: dr, plr, accel, and yours
     scoring.py     score-function registry (what "worth training on" means)
+    oracle.py      learned model of p(solve | level), used by the sfl_oracle teacher
     levels.py      level generator / mutator registry
+    level_diagnostics.py  BFS over generated levels: solvable fraction, difficulty
     train.py       teacher-agnostic training loop
     evaluate.py    checkpoint -> held-out solve rates
     sweep.py       resumable, detached job queue

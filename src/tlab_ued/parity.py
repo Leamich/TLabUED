@@ -118,7 +118,9 @@ def run_ours(config: Dict[str, Any]) -> List[Dict[str, float]]:
 
     logs: List[Dict[str, float]] = []
     with capture_wandb_logs(logs):
-        main({**config, "log_media": "none"})
+        # Diagnostics do not touch the training PRNG stream, but upstream has no
+        # counterpart to them, so skip the wall time.
+        main({**config, "log_media": "none", "diagnose_levels": 0})
     return logs
 
 

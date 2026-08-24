@@ -31,10 +31,11 @@ import orbax.checkpoint as ocp
 from jaxued.environments import Maze, MazeRenderer
 from jaxued.environments.maze import Level
 
+from tlab_ued import level_diagnostics
 from tlab_ued import levels as level_registry
 from tlab_ued import student
 from tlab_ued.config import assert_student_frozen, from_args
-from tlab_ued.logging_utils import Logger, checkpoint_dir
+from tlab_ued.logging_utils import Logger, checkpoint_dir, run_dir
 from tlab_ued.student import ActorCritic
 from tlab_ued.teachers import TrainContext, TrainState, get_teacher_cls
 
@@ -131,6 +132,21 @@ def main(config: Dict[str, Any]):
 
     assert_student_frozen(config)
     ctx, teacher = build(config)
+
+    # What is the student about to be handed? Cheap enough to always know, and
+    # it answers the first question any surprising curve raises. Its PRNG key is
+    # its own, so switching it on or off leaves the run bit-identical.
+    level_diagnostics.report(
+        config,
+        ctx.sample_random_level,
+        ctx.mutate_level,
+        ctx.env_params.max_steps_in_episode,
+        out_path=os.path.join(run_dir(config), "level_diagnostics.json"),
+    )
+
+    for key, value in teacher.startup_report().items():
+        print(f"  {key:<28}{value}", flush=True)
+
     eval_fn = make_eval_fn(ctx)
     log_media = config.get("log_media", "all")
 

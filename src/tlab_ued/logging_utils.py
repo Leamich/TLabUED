@@ -83,6 +83,23 @@ def _flatten_scalars(d: Dict[str, Any], prefix: str = "") -> Dict[str, float]:
     return flat
 
 
+# Metrics `log_eval` handles by name; everything else a teacher returns is
+# logged generically under `train/`.
+_RESERVED_STATS = frozenset(
+    {
+        "update_count",
+        "eval_solve_rates",
+        "eval_returns",
+        "eval_ep_lengths",
+        "eval_animation",
+        "losses",
+        "mean_num_blocks",
+        "media",
+        "time_delta",
+    }
+)
+
+
 class Logger:
     """wandb + CSV writer for one training run."""
 
@@ -179,6 +196,18 @@ class Logger:
             )
         if "mean_num_blocks" in stats:
             log_dict["level/mean_num_blocks"] = float(np.asarray(stats["mean_num_blocks"]).mean())
+
+        # Anything else a teacher's branches returned, averaged over the updates
+        # in this eval block. Upstream's teachers return nothing here, so the
+        # baselines' columns are unchanged; a teacher that measures its own
+        # curriculum (e.g. `sfl_accel`'s success rate) gets it into the CSV
+        # without a new call site.
+        for key, value in stats.items():
+            if key in _RESERVED_STATS:
+                continue
+            array = np.asarray(value)
+            if array.ndim == 0:
+                log_dict[f"train/{key}"] = float(array)
 
         log_dict.update(teacher_info.get("log", {}))
 
