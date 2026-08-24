@@ -1,0 +1,451 @@
+{
+  "meta": {
+    "run": "accel_maxmc",
+    "seed": 1,
+    "steps": [
+      0,
+      17,
+      34,
+      51,
+      68,
+      85,
+      102,
+      119
+    ],
+    "top_k": 32
+  },
+  "steps": {
+    "0": {
+      "size": 4000,
+      "score_mean": 0.015078496187925339,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 99.45,
+        "unreachable_pct": 0.5499999999999999,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 23.90925,
+        "wall_pct": 14.14748520710059,
+        "reachable_free_pct": 99.39704924603436,
+        "steps_mean": 11.14831573655103,
+        "steps_median": 11.0,
+        "steps_p10": 4.0,
+        "steps_p90": 18.0,
+        "steps_max": 32,
+        "optimal_return_mean": 0.9598660633484163,
+        "buckets_pct": {
+          "trivial<=10": 46.400000000000006,
+          "easy<=30": 53.025,
+          "medium<=60": 0.025,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.5499999999999999
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 24.1875,
+        "wall_pct": 14.312130177514792,
+        "reachable_free_pct": 99.8904200171478,
+        "steps_mean": 3.09375,
+        "steps_median": 3.0,
+        "steps_p10": 1.0,
+        "steps_p90": 4.900000000000002,
+        "steps_max": 9,
+        "optimal_return_mean": 0.9888625,
+        "buckets_pct": {
+          "trivial<=10": 100.0,
+          "easy<=30": 0.0,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "17": {
+      "size": 4000,
+      "score_mean": 0.27349981665611267,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 99.675,
+        "unreachable_pct": 0.325,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 24.91425,
+        "wall_pct": 14.742159763313609,
+        "reachable_free_pct": 99.42391046708116,
+        "steps_mean": 11.945322297466767,
+        "steps_median": 12.0,
+        "steps_p10": 6.0,
+        "steps_p90": 18.0,
+        "steps_max": 32,
+        "optimal_return_mean": 0.9569968397291196,
+        "buckets_pct": {
+          "trivial<=10": 37.974999999999994,
+          "easy<=30": 61.650000000000006,
+          "medium<=60": 0.05,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.325
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 24.875,
+        "wall_pct": 14.718934911242604,
+        "reachable_free_pct": 99.84846729486007,
+        "steps_mean": 13.28125,
+        "steps_median": 13.0,
+        "steps_p10": 9.0,
+        "steps_p90": 16.0,
+        "steps_max": 21,
+        "optimal_return_mean": 0.9521875,
+        "buckets_pct": {
+          "trivial<=10": 21.875,
+          "easy<=30": 78.125,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "34": {
+      "size": 4000,
+      "score_mean": 0.28145432472229004,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 99.875,
+        "unreachable_pct": 0.125,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 26.5515,
+        "wall_pct": 15.71094674556213,
+        "reachable_free_pct": 99.4949149470837,
+        "steps_mean": 12.387484355444306,
+        "steps_median": 12.0,
+        "steps_p10": 7.0,
+        "steps_p90": 18.0,
+        "steps_max": 32,
+        "optimal_return_mean": 0.9554050563204005,
+        "buckets_pct": {
+          "trivial<=10": 34.050000000000004,
+          "easy<=30": 65.8,
+          "medium<=60": 0.025,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.125
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 35.03125,
+        "wall_pct": 20.72855029585799,
+        "reachable_free_pct": 99.5934074584695,
+        "steps_mean": 14.125,
+        "steps_median": 14.0,
+        "steps_p10": 9.0,
+        "steps_p90": 19.900000000000002,
+        "steps_max": 20,
+        "optimal_return_mean": 0.94915,
+        "buckets_pct": {
+          "trivial<=10": 28.125,
+          "easy<=30": 71.875,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "51": {
+      "size": 4000,
+      "score_mean": 0.30549103021621704,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 99.9,
+        "unreachable_pct": 0.1,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 30.464,
+        "wall_pct": 18.026035502958578,
+        "reachable_free_pct": 99.058533138904,
+        "steps_mean": 12.825075075075075,
+        "steps_median": 13.0,
+        "steps_p10": 8.0,
+        "steps_p90": 18.0,
+        "steps_max": 29,
+        "optimal_return_mean": 0.9538297297297297,
+        "buckets_pct": {
+          "trivial<=10": 29.325000000000003,
+          "easy<=30": 70.575,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.1
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 35.5,
+        "wall_pct": 21.005917159763314,
+        "reachable_free_pct": 98.96124893646527,
+        "steps_mean": 14.4375,
+        "steps_median": 13.5,
+        "steps_p10": 11.0,
+        "steps_p90": 18.900000000000002,
+        "steps_max": 28,
+        "optimal_return_mean": 0.948025,
+        "buckets_pct": {
+          "trivial<=10": 9.375,
+          "easy<=30": 90.625,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "68": {
+      "size": 4000,
+      "score_mean": 0.2901466190814972,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 99.95,
+        "unreachable_pct": 0.05,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 34.43525,
+        "wall_pct": 20.375887573964498,
+        "reachable_free_pct": 98.08747852877073,
+        "steps_mean": 13.739369684842421,
+        "steps_median": 13.0,
+        "steps_p10": 8.0,
+        "steps_p90": 20.0,
+        "steps_max": 31,
+        "optimal_return_mean": 0.9505382691345673,
+        "buckets_pct": {
+          "trivial<=10": 23.674999999999997,
+          "easy<=30": 76.225,
+          "medium<=60": 0.05,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.05
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 40.75,
+        "wall_pct": 24.11242603550296,
+        "reachable_free_pct": 96.8891361442319,
+        "steps_mean": 15.03125,
+        "steps_median": 14.0,
+        "steps_p10": 9.0,
+        "steps_p90": 21.900000000000002,
+        "steps_max": 23,
+        "optimal_return_mean": 0.9458875,
+        "buckets_pct": {
+          "trivial<=10": 15.625,
+          "easy<=30": 84.375,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "85": {
+      "size": 4000,
+      "score_mean": 0.2918786108493805,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 37.81,
+        "wall_pct": 22.37278106508876,
+        "reachable_free_pct": 97.05562652734005,
+        "steps_mean": 14.45675,
+        "steps_median": 14.0,
+        "steps_p10": 9.0,
+        "steps_p90": 21.0,
+        "steps_max": 34,
+        "optimal_return_mean": 0.9479557,
+        "buckets_pct": {
+          "trivial<=10": 20.0,
+          "easy<=30": 79.85,
+          "medium<=60": 0.15,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 41.90625,
+        "wall_pct": 24.796597633136095,
+        "reachable_free_pct": 96.5416611531088,
+        "steps_mean": 16.53125,
+        "steps_median": 16.0,
+        "steps_p10": 9.2,
+        "steps_p90": 23.900000000000002,
+        "steps_max": 34,
+        "optimal_return_mean": 0.9404875000000001,
+        "buckets_pct": {
+          "trivial<=10": 12.5,
+          "easy<=30": 84.375,
+          "medium<=60": 3.125,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "102": {
+      "size": 4000,
+      "score_mean": 0.32343918085098267,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 40.98125,
+        "wall_pct": 24.249260355029588,
+        "reachable_free_pct": 95.8672637548561,
+        "steps_mean": 15.112,
+        "steps_median": 15.0,
+        "steps_p10": 9.0,
+        "steps_p90": 21.0,
+        "steps_max": 34,
+        "optimal_return_mean": 0.9455968,
+        "buckets_pct": {
+          "trivial<=10": 17.65,
+          "easy<=30": 81.975,
+          "medium<=60": 0.375,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 45.3125,
+        "wall_pct": 26.812130177514792,
+        "reachable_free_pct": 94.560971453928,
+        "steps_mean": 15.0,
+        "steps_median": 14.0,
+        "steps_p10": 10.1,
+        "steps_p90": 20.900000000000002,
+        "steps_max": 22,
+        "optimal_return_mean": 0.9460000000000001,
+        "buckets_pct": {
+          "trivial<=10": 12.5,
+          "easy<=30": 87.5,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    },
+    "119": {
+      "size": 4000,
+      "score_mean": 0.31086477637290955,
+      "buffer": {
+        "num_levels": 4000,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 43.89325,
+        "wall_pct": 25.97233727810651,
+        "reachable_free_pct": 94.68873136959868,
+        "steps_mean": 15.83775,
+        "steps_median": 16.0,
+        "steps_p10": 10.0,
+        "steps_p90": 22.0,
+        "steps_max": 40,
+        "optimal_return_mean": 0.9429841,
+        "buckets_pct": {
+          "trivial<=10": 15.4,
+          "easy<=30": 84.0,
+          "medium<=60": 0.6,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      },
+      "top32": {
+        "num_levels": 32,
+        "max_steps_in_episode": 250,
+        "solvable_pct": 100.0,
+        "unreachable_pct": 0.0,
+        "over_time_limit_pct": 0.0,
+        "malformed_pct": 0.0,
+        "mean_num_walls": 48.1875,
+        "wall_pct": 28.513313609467456,
+        "reachable_free_pct": 90.37022786839107,
+        "steps_mean": 16.8125,
+        "steps_median": 18.0,
+        "steps_p10": 10.2,
+        "steps_p90": 22.900000000000002,
+        "steps_max": 24,
+        "optimal_return_mean": 0.9394750000000001,
+        "buckets_pct": {
+          "trivial<=10": 12.5,
+          "easy<=30": 87.5,
+          "medium<=60": 0.0,
+          "hard<=120": 0.0,
+          "brutal>120": 0.0,
+          "unsolvable": 0.0
+        }
+      }
+    }
+  }
+}

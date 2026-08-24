@@ -24,6 +24,7 @@ from tlab_ued.config import make_config  # noqa: E402
 from tlab_ued.level_diagnostics import (  # noqa: E402
     UNREACHABLE,
     diagnose,
+    mutation_ladder,
     solve_levels,
     summarize,
 )
@@ -268,3 +269,45 @@ def test_diagnose_does_not_depend_on_the_training_stream():
         diagnose(other, *_level_fns(other))["generator"]["steps_mean"]
         != first["generator"]["steps_mean"]
     )
+
+# === The mutation ladder ===
+
+
+def test_ladder_reports_both_arms_at_every_requested_round():
+    config = make_config(preset="accel", seed=0)
+    ladder = mutation_ladder(
+        config, *_level_fns(config), num_levels=32, rounds=(0, 2), proposals=2
+    )
+    assert set(ladder) == {"meta", "random", "hardest_of_2"}
+    for arm in ("random", "hardest_of_2"):
+        assert set(ladder[arm]) == {"0", "2"}
+
+
+def test_both_arms_start_from_the_same_levels():
+    # Round 0 is "no mutation applied yet", so the arms can only diverge after
+    # it - otherwise the ladder would be comparing two different populations.
+    config = make_config(preset="accel", seed=0)
+    ladder = mutation_ladder(
+        config, *_level_fns(config), num_levels=32, rounds=(0, 1), proposals=2
+    )
+    assert ladder["random"]["0"] == ladder["hardest_of_2"]["0"]
+
+
+def test_selection_never_prefers_a_broken_child():
+    """The selection arm scores an unsolvable child -1, so it can only lose.
+
+    With enough proposals per parent, the arm should therefore keep solvability
+    at least as high as the unselected one - the whole point of the -1.
+    """
+    config = make_config(preset="accel", seed=0)
+    ladder = mutation_ladder(
+        config, *_level_fns(config), num_levels=64, rounds=(6,), proposals=4
+    )
+    assert ladder["hardest_of_4"]["6"]["solvable_pct"] >= ladder["random"]["6"]["solvable_pct"]
+
+
+def test_the_ladder_does_not_depend_on_the_training_stream():
+    config = make_config(preset="accel", seed=5)
+    first = mutation_ladder(config, *_level_fns(config), num_levels=32, rounds=(1,), proposals=2)
+    second = mutation_ladder(config, *_level_fns(config), num_levels=32, rounds=(1,), proposals=2)
+    assert first == second

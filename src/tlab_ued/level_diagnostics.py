@@ -256,6 +256,152 @@ def mutate_levels(mutate_level: Callable, rng, levels, num_edits: int, rounds: i
     return levels
 
 
+# Rounds at which the ladder is measured. Geometric, because if difficulty grows
+# at all it grows slowly: `accel` mutates a replayed level ~13000 times over a
+# run, so a lineage can be dozens of edits deep by the end.
+LADDER_ROUNDS: Tuple[int, ...] = (0, 1, 2, 3, 5, 8, 12, 18, 25, 35, 50)
+
+
+def _hardest_child(
+    mutate_level: Callable,
+    rng,
+    levels,
+    num_edits: int,
+    proposals: int,
+    max_steps_in_episode: int,
+):
+    """`proposals` children per parent; the one with the longest optimal path wins.
+
+    This is the selection arm's step. It is deliberately an *upper bound* on what
+    any curriculum could extract from this operator: a real teacher selects on a
+    learnability or regret score measured through the student, not on the true
+    shortest path, which it never sees. Children that became unsolvable score -1
+    so they can never win - the mutator is allowed to break a level, but the
+    selection is not allowed to reward it for that.
+    """
+    n = int(np.asarray(levels.wall_map).shape[0])
+    best = None
+    best_score = None
+    for key in jax.random.split(rng, proposals):
+        child = jax.vmap(mutate_level, (0, 0, None))(jax.random.split(key, n), levels, num_edits)
+        steps = solve_levels(child)["steps"]
+        score = jnp.where(steps <= max_steps_in_episode, steps, -1)
+        if best is None:
+            best, best_score = child, score
+        else:
+            better = score > best_score
+            best = jax.tree_util.tree_map(
+                lambda a, b: jnp.where(better.reshape((-1,) + (1,) * (a.ndim - 1)), a, b),
+                child,
+                best,
+            )
+            best_score = jnp.maximum(score, best_score)
+    return best
+
+
+def mutation_ladder(
+    config: Dict[str, Any],
+    sample_random_level: Callable,
+    mutate_level: Callable,
+    max_steps_in_episode: int = 250,
+    num_levels: Optional[int] = None,
+    rounds: Tuple[int, ...] = LADDER_ROUNDS,
+    proposals: Optional[int] = None,
+    seed: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Difficulty as a function of how many mutations deep a lineage is.
+
+    `diagnose` measures one edit applied to a fresh level, which answers "what
+    does the operator do" but not "what does repeated application do". ACCEL's
+    premise is a ladder: a child that scored well is kept, replayed, mutated
+    again, and complexity accumulates over the run. This measures the ladder
+    directly, in two arms that bracket the real curriculum:
+
+      random        - every child replaces its parent. The null: what mutation
+                      does with no selection at all.
+      hardest_of_m  - m children per parent, the one with the longest optimal
+                      path survives. The ceiling: what perfect selection *on
+                      difficulty itself* could extract from this operator.
+
+    A real teacher sits between the two, so if both arms are flat the ladder does
+    not exist in this domain and level growth over a run has to come from
+    somewhere else. Nothing here touches the training PRNG stream.
+
+    What this deliberately cannot do is reproduce the actual curriculum: real
+    selection runs through the student, and which level becomes an ancestor
+    depends on the score its rollouts produced. For that, read the buffer out of
+    a finished run's checkpoints - `tlab_ued.buffer_diagnostics`.
+    """
+    num_levels = int(config.get("diagnose_levels", 1024) if num_levels is None else num_levels)
+    proposals = int(config.get("ladder_proposals", 8) if proposals is None else proposals)
+    seed = int(config.get("seed", 0) if seed is None else seed)
+    num_edits = int(config["num_edits"])
+
+    rng = jax.random.fold_in(jax.random.PRNGKey(seed), 0x1ADDE2)
+    rng_sample, rng_random, rng_select = jax.random.split(rng, 3)
+    start = sample_levels(sample_random_level, rng_sample, num_levels)
+
+    arms = {
+        "random": (rng_random, None),
+        f"hardest_of_{proposals}": (rng_select, proposals),
+    }
+    wanted = sorted(set(int(r) for r in rounds))
+    out: Dict[str, Any] = {
+        "meta": {
+            "num_levels": num_levels,
+            "num_edits": num_edits,
+            "proposals": proposals,
+            "seed": seed,
+            "rounds": wanted,
+        }
+    }
+    for arm, (arm_rng, arm_proposals) in arms.items():
+        levels = start
+        per_round: Dict[str, Any] = {}
+        for k in range(max(wanted) + 1):
+            if k > 0:
+                arm_rng, step_rng = jax.random.split(arm_rng)
+                if arm_proposals is None:
+                    levels = mutate_levels(mutate_level, step_rng, levels, num_edits, rounds=1)
+                else:
+                    levels = _hardest_child(
+                        mutate_level,
+                        step_rng,
+                        levels,
+                        num_edits,
+                        arm_proposals,
+                        max_steps_in_episode,
+                    )
+            if k in wanted:
+                per_round[str(k)] = summarize(levels, max_steps_in_episode)
+        out[arm] = per_round
+    return out
+
+
+def format_ladder(ladder: Dict[str, Any]) -> str:
+    """The ladder as one table per arm, meant to be read in a terminal."""
+    meta = ladder["meta"]
+    lines = [
+        f"Mutation ladder  (n={meta['num_levels']} levels, {meta['num_edits']} edit(s) per round, "
+        f"seed {meta['seed']})",
+    ]
+    for arm, per_round in ladder.items():
+        if arm == "meta":
+            continue
+        lines += [
+            "",
+            f"  {arm}",
+            "    rounds  solvable%  median  p90   max   walls",
+        ]
+        for k in meta["rounds"]:
+            st = per_round[str(k)]
+            lines.append(
+                f"    {k:>6}  {st['solvable_pct']:>8.1f}  {st['steps_median']:>6.0f}  "
+                f"{st['steps_p90']:>4.0f}  {st['steps_max']:>4}  {st['mean_num_walls']:>5.1f}"
+            )
+    return "\n".join(lines)
+
+
 def diagnose(
     config: Dict[str, Any],
     sample_random_level: Callable,
@@ -349,13 +495,23 @@ def main(argv: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
     # A CLI invocation *is* the diagnostic, so an unset --diagnose_levels means
     # "use a sample big enough to trust the tails", not "skip it".
     num_levels = config["diagnose_levels"] or 8192
-    return report(
-        config,
-        level_registry.get_generator(config, env),
-        level_registry.get_mutator(config, env),
-        env.default_params.max_steps_in_episode,
-        num_levels=num_levels,
-    )
+    generator = level_registry.get_generator(config, env)
+    mutator = level_registry.get_mutator(config, env)
+    max_steps = env.default_params.max_steps_in_episode
+
+    if config.get("ladder"):
+        ladder = mutation_ladder(config, generator, mutator, max_steps, num_levels=num_levels)
+        print("")
+        print(format_ladder(ladder), flush=True)
+        print("")
+        out_path = config.get("ladder_out")
+        if out_path:
+            os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+            with open(out_path, "w") as f:
+                json.dump(ladder, f, indent=2)
+        return {"ladder": ladder}
+
+    return report(config, generator, mutator, max_steps, num_levels=num_levels)
 
 
 if __name__ == "__main__":
