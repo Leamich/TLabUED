@@ -105,6 +105,14 @@ EXTRA_DEFAULTS: Dict[str, Any] = {
     # how many rounds of the mutator to apply before diagnosing the children
     # (mutation teachers only)
     "diagnose_mutation_rounds": 1,
+    # `python -m tlab_ued.level_diagnostics --ladder`: difficulty as a function of
+    # how many mutations deep a lineage is. Standalone diagnostic only - it never
+    # runs inside training and never touches the training PRNG stream.
+    "ladder": False,
+    # children per parent in the ladder's selection arm; 1 makes both arms equal
+    "ladder_proposals": 8,
+    # write the ladder to this JSON path as well as printing it
+    "ladder_out": "",
     # bypass the student-freeze guard (deliberate ablations only)
     "allow_student_changes": False,
     # === SFL (teacher `sfl_accel`; see teachers/sfl_accel.py) ===
@@ -357,6 +365,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULTS["diagnose_mutation_rounds"],
         help="rounds of the mutator to apply before diagnosing the children",
+    )
+    _bool_flag(
+        p,
+        "ladder",
+        DEFAULTS["ladder"],
+        "level_diagnostics only: measure difficulty vs mutation depth instead of one batch",
+    )
+    p.add_argument(
+        "--ladder_proposals",
+        type=int,
+        default=DEFAULTS["ladder_proposals"],
+        help="children per parent in the ladder's selection arm",
+    )
+    p.add_argument(
+        "--ladder_out",
+        type=str,
+        default=DEFAULTS["ladder_out"],
+        help="write the ladder to this JSON path as well as printing it",
     )
     _bool_flag(p, "allow_student_changes", DEFAULTS["allow_student_changes"])
     # === SFL (ours) ===
