@@ -210,7 +210,17 @@ resolve_py() {
 # this point can be compared with the numbers in the README.
 checks() {
   resolve_py
-  run "$PY" -m pytest tests -q || return 1
+  # The suite on CPU, deliberately. These tests assert logic - branch counts,
+  # state shapes, that the checkpoint still exposes an untouched student - and
+  # none of them checks GPU numerics. They are compile-bound, and XLA takes far
+  # longer to compile these small graphs for a GPU than for a CPU: 113 tests run
+  # in under ten minutes on a laptop CPU and were still 36 tests in on a 4090
+  # after twenty-five minutes, on track to eat the whole GPU budget in the gate
+  # that exists to protect it.
+  run env JAX_PLATFORMS=cpu "$PY" -m pytest tests -q || return 1
+  # Parity stays on the GPU: it is the check that the baselines still reproduce
+  # upstream bit for bit, and it has to run on the backend the results come from.
+  # One compile amortised over 500 updates, rather than one per test.
   run "$PY" -m tlab_ued.parity --presets dr plr accel --num_updates 500 || return 1
 }
 
