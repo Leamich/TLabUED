@@ -1,0 +1,33 @@
+=== pod_entry 20260826T080011Z ===
+user=root pwd=/ work=/workspace
+pod=y897dy4iijqce9 stop_after=pick max_hours=3
+gh_token=set runpod_key=set
+--- gpu ---
+Wed Aug 26 08:00:11 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        On  |   00000000:01:00.0 Off |                  Off |
+|  0%   38C    P8             22W /  450W |       1MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+no nvidia-smi
+--- disk ---
+Filesystem      Size  Used Avail Use% Mounted on
+overlay          60G   16M   60G   1% /
+--- memory ---
+               total        used        free      shared  buff/cache   available
+Mem:             503          53         244           1         206         444
+--- tools ---
+  git: /usr/bin/git
+  curl: /usr/bin/curl
+  python3: /usr/bin/python3
+  uv: MISSING
+--- cloning ---
+Cloning into '/workspace/TLabUED'...
+repo at 079fbc8
+--- heartbeat ---
