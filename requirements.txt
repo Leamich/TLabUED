@@ -23,3 +23,7 @@ matplotlib
 # gate before every stage that costs GPU time, and a pod whose venv cannot run
 # the tests fails that gate having already paid for the bootstrap.
 pytest
+# Parallel test execution. The suite is compile-bound and embarrassingly
+# parallel, and the pod has 24 vCPUs: 113 tests take 9m46s serially and 4m41s
+# on six workers, which is the difference between a gate and a delay.
+pytest-xdist

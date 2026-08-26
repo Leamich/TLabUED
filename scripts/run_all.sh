@@ -217,7 +217,7 @@ checks() {
   # in under ten minutes on a laptop CPU and were still 36 tests in on a 4090
   # after twenty-five minutes, on track to eat the whole GPU budget in the gate
   # that exists to protect it.
-  run env JAX_PLATFORMS=cpu "$PY" -m pytest tests -q || return 1
+  run env JAX_PLATFORMS=cpu "$PY" -m pytest tests -q -n "${PYTEST_WORKERS:-8}" || return 1
   # Parity stays on the GPU: it is the check that the baselines still reproduce
   # upstream bit for bit, and it has to run on the backend the results come from.
   # One compile amortised over 500 updates, rather than one per test.

@@ -83,6 +83,14 @@ def restore_tree(step_dir: str) -> Dict[str, Any]:
       analysis is CPU-only BFS and never touches the student.
     * the metadata tree is orbax's own mapping type, not a dict, so it has to be
       flattened into plain containers before `tree_map` will walk it.
+    * `metadata()` returns different things in different orbax versions. Under
+      the pinned `orbax-checkpoint==0.5.3` it is the parameter tree itself; newer
+      releases wrap it in a step-metadata object and put the tree on
+      `.item_metadata`. This repository's contract is 0.5.3 (docs/TASK.md pins
+      it), but a developer's own venv is often much newer, and writing against
+      whichever happens to be installed is how this function came to crash on
+      the pod with `'dict' object has no attribute 'item_metadata'` after
+      working locally.
     """
     import jax
     import orbax.checkpoint as ocp
@@ -93,7 +101,8 @@ def restore_tree(step_dir: str) -> Dict[str, Any]:
         path = item
 
     checkpointer = ocp.PyTreeCheckpointer()
-    structure = _plain(checkpointer.metadata(path).item_metadata)
+    metadata = checkpointer.metadata(path)
+    structure = _plain(getattr(metadata, "item_metadata", metadata))
     restore_args = jax.tree_util.tree_map(
         lambda _: ocp.RestoreArgs(restore_type=np.ndarray), structure
     )
