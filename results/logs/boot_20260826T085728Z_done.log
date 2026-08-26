@@ -1,0 +1,349 @@
+=== pod_entry 20260826T085728Z ===
+user=root pwd=/ work=/workspace
+pod=h7vuov4lif2f3j stop_after=pick max_hours=3
+gh_token=set runpod_key=set
+--- gpu ---
+Wed Aug 26 08:57:28 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.195.03             Driver Version: 570.195.03     CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        On  |   00000000:C1:00.0 Off |                  Off |
+|  0%   54C    P3             48W /  450W |       1MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+no nvidia-smi
+--- disk ---
+Filesystem      Size  Used Avail Use% Mounted on
+overlay          60G   16M   60G   1% /
+--- memory ---
+               total        used        free      shared  buff/cache   available
+Mem:             251          30          78           0         142         217
+--- tools ---
+  git: /usr/bin/git
+  curl: /usr/bin/curl
+  python3: /usr/bin/python3
+  uv: MISSING
+--- cloning ---
+Cloning into '/workspace/TLabUED'...
+repo at f93e5f4
+--- heartbeat ---
+publish: pushed
+--- run_all ---
+[09:08:16] === run_all starting (repo d8ddec9) ===
+[09:08:16] stage preflight: start
+[09:08:17] preflight ok (teardown=1, dry_run=0)
+[09:08:17] stage preflight: done
+[09:08:17]   watchdog armed: pod dies after 3h whatever happens
+[09:08:17] stage bootstrap: start
+repo:      /workspace/TLabUED
+workspace: /workspace/TLabUED
+venv:      /workspace/TLabUED/venvs/jaxued
+Cloning into '/workspace/TLabUED/third_party/jaxued'...
+jaxued @ 0f8f128
+downloading uv 0.12.5 x86_64-unknown-linux-gnu
+installing to /root/.local/bin
+  uv
+  uvx
+everything's installed!
+
+To add $HOME/.local/bin to your PATH, either restart your shell or run:
+
+    source $HOME/.local/bin/env (sh, bash, zsh)
+    source $HOME/.local/bin/env.fish (fish)
+Using CPython 3.11.10 interpreter at: /usr/bin/python3.11
+Creating virtual environment at: venvs/jaxued
+Activate with: source venvs/jaxued/bin/activate
+Using Python 3.11.10 environment at: venvs/jaxued
+Resolved 86 packages in 1.51s
+Downloading kiwisolver (1.4MiB)
+Downloading pygments (1.2MiB)
+Downloading tensorstore (20.6MiB)
+Downloading pandas (10.8MiB)
+Downloading matplotlib (9.6MiB)
+Downloading numpy (17.4MiB)
+Downloading jaxlib (76.0MiB)
+Downloading fonttools (4.8MiB)
+Downloading scipy (33.7MiB)
+Downloading tensorflow-probability (6.7MiB)
+Downloading imageio-ffmpeg (28.1MiB)
+Downloading nvidia-cusparse-cu12 (197.8MiB)
+Downloading ml-dtypes (4.8MiB)
+Downloading pillow (6.6MiB)
+Downloading nvidia-cublas-cu12 (346.6MiB)
+Downloading jax (1.9MiB)
+Downloading nvidia-cuda-cupti-cu12 (13.2MiB)
+Downloading nvidia-nvjitlink-cu12 (20.1MiB)
+Downloading nvidia-cudnn-cu12 (634.0MiB)
+Downloading nvidia-nccl-cu12 (326.3MiB)
+Downloading jax-cuda12-pjrt (77.9MiB)
+Downloading nvidia-cusolver-cu12 (124.5MiB)
+Downloading wandb (6.5MiB)
+Downloading nvidia-cufft-cu12 (183.6MiB)
+Downloading nvidia-cuda-nvcc-cu12 (21.2MiB)
+Downloading jax-cuda12-plugin (14.2MiB)
+   Building gym==0.26.2
+   Building moviepy==1.0.3
+      Built moviepy==1.0.3
+      Built gym==0.26.2
+ Downloaded pygments
+ Downloaded kiwisolver
+ Downloaded jax
+ Downloaded ml-dtypes
+ Downloaded fonttools
+ Downloaded wandb
+ Downloaded tensorflow-probability
+ Downloaded pillow
+ Downloaded matplotlib
+ Downloaded pandas
+ Downloaded nvidia-cuda-cupti-cu12
+ Downloaded jax-cuda12-plugin
+ Downloaded numpy
+ Downloaded nvidia-nvjitlink-cu12
+ Downloaded tensorstore
+ Downloaded nvidia-cuda-nvcc-cu12
+ Downloaded imageio-ffmpeg
+ Downloaded scipy
+ Downloaded jaxlib
+ Downloaded jax-cuda12-pjrt
+ Downloaded nvidia-cusolver-cu12
+ Downloaded nvidia-cufft-cu12
+ Downloaded nvidia-cusparse-cu12
+ Downloaded nvidia-nccl-cu12
+ Downloaded nvidia-cublas-cu12
+ Downloaded nvidia-cudnn-cu12
+Prepared 85 packages in 9m 47s
+Installed 85 packages in 492ms
+ + absl-py==2.5.0
+ + attrs==26.1.0
+ + certifi==2026.7.22
+ + charset-normalizer==3.5.1
+ + chex==0.1.86
+ + click==8.4.2
+ + cloudpickle==3.1.2
+ + contourpy==1.3.3
+ + cycler==0.12.1
+ + decorator==4.4.2
+ + distrax==0.1.5
+ + dm-tree==0.1.10
+ + docker-pycreds==0.4.0
+ + etils==1.14.0
+ + farama-notifications==0.0.6
+ + flax==0.8.5
+ + fonttools==4.63.0
+ + fsspec==2026.7.0
+ + gast==0.7.0
+ + gitdb==4.0.12
+ + gitpython==3.1.60
+ + gym==0.26.2
+ + gym-notices==0.1.0
+ + gymnasium==1.3.0
+ + gymnax==0.0.8
+ + idna==3.19
+ + imageio==2.37.4
+ + imageio-ffmpeg==0.6.0
+ + iniconfig==2.3.0
+ + jax==0.4.30
+ + jax-cuda12-pjrt==0.4.30
+ + jax-cuda12-plugin==0.4.30
+ + jaxlib==0.4.30
+ + kiwisolver==1.5.0
+ + markdown-it-py==4.2.0
+ + matplotlib==3.11.1
+ + mdurl==0.1.2
+ + ml-dtypes==0.5.4
+ + moviepy==1.0.3
+ + msgpack==1.2.1
+ + nest-asyncio==1.6.0
+ + numpy==1.26.4
+ + nvidia-cublas-cu12==12.4.5.8
+ + nvidia-cuda-cupti-cu12==12.4.127
+ + nvidia-cuda-nvcc-cu12==12.4.131
+ + nvidia-cuda-runtime-cu12==12.4.127
+ + nvidia-cudnn-cu12==9.1.1.17
+ + nvidia-cufft-cu12==11.2.6.59
+ + nvidia-cusolver-cu12==11.6.4.69
+ + nvidia-cusparse-cu12==12.3.1.170
+ + nvidia-nccl-cu12==2.31.2
+ + nvidia-nvjitlink-cu12==12.4.127
+ + opt-einsum==3.4.0
+ + optax==0.2.3
+ + orbax-checkpoint==0.5.3
+ + packaging==26.3
+ + pandas==3.0.5
+ + pillow==12.3.0
+ + platformdirs==4.11.4
+ + pluggy==1.6.0
+ + proglog==0.1.12
+ + protobuf==5.29.6
+ + psutil==7.2.2
+ + pygments==2.21.0
+ + pyparsing==3.3.2
+ + pytest==9.1.1
+ + python-dateutil==2.9.0.post0
+ + pyyaml==6.0.3
+ + requests==2.34.2
+ + rich==15.0.0
+ + scipy==1.17.1
+ + seaborn==0.13.2
+ + sentry-sdk==2.68.1
+ + setproctitle==1.3.7
+ + six==1.17.0
+ + smmap==5.0.3
+ + tensorflow-probability==0.25.0
+ + tensorstore==0.1.85
+ + toolz==1.1.0
+ + tqdm==4.70.0
+ + typing-extensions==4.16.0
+ + urllib3==2.7.0
+ + wandb==0.17.5
+ + wrapt==2.3.0
+ + zipp==4.1.0
+Using Python 3.11.10 environment at: venvs/jaxued
+Resolved 1 package in 2ms
+   Building jaxued @ file:///workspace/TLabUED/third_party/jaxued
+      Built jaxued @ file:///workspace/TLabUED/third_party/jaxued
+Prepared 1 package in 694ms
+Installed 1 package in 2ms
+ + jaxued==0.0.2 (from file:///workspace/TLabUED/third_party/jaxued)
+Using Python 3.11.10 environment at: venvs/jaxued
+Resolved 1 package in 2ms
+   Building tlab-ued @ file:///workspace/TLabUED
+      Built tlab-ued @ file:///workspace/TLabUED
+Prepared 1 package in 673ms
+Installed 1 package in 5ms
+ + tlab-ued==0.1.0 (from file:///workspace/TLabUED)
+jax 0.4.30 devices: [cuda(id=0)]
+teachers: ['accel', 'dr', 'plr', 'sfl_accel', 'sfl_oracle']
+bootstrap complete
+/workspace/TLabUED/venvs/jaxued/bin/python
+[09:18:29] python: /workspace/TLabUED/venvs/jaxued/bin/python
+[09:18:29] stage bootstrap: done
+[09:18:29] stage checks: start
+........................................................................ [ 63%]
+.........................................                                [100%]
+=============================== warnings summary ===============================
+tests/test_sfl_accel.py::test_every_branch_runs_and_the_state_keeps_its_shape
+  /workspace/TLabUED/venvs/jaxued/lib/python3.11/site-packages/wandb/analytics/sentry.py:90: SentryHubDeprecationWarning: `sentry_sdk.Hub` is deprecated and will be removed in a future major release. Please consult our 1.x to 2.x migration guide for details on how to migrate `Hub` usage to the new API: https://docs.sentry.io/platforms/python/migration/1.x-to-2.x
+    self.hub = sentry_sdk.Hub(client)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+113 passed, 1 warning in 1119.13s (0:18:39)
+--- upstream maze_dr.py (dr, seed 0) ---
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+Logging update: 500
+--- tlab_ued.train (dr, seed 0) ---
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/wandb/offline-run-20260826_093730-mc5n788u
+wandb: Find logs at: ./wandb/offline-run-20260826_093730-mc5n788u/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+[1/2] solve_rate/mean=0.000 sps=36218 eta=0.02h
+Logging update: 500
+[2/2] solve_rate/mean=0.000 sps=91487 eta=0.00h
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/runs/_parity/runs/parity_dr/0/wandb/offline-run-20260826_093936-0naq9uim
+wandb: Find logs at: ./runs/_parity/runs/parity_dr/0/wandb/offline-run-20260826_093936-0naq9uim/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
+parity[dr, seed 0] over 2 eval steps: IDENTICAL
+--- upstream maze_plr.py (plr, seed 0) ---
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+Logging update: 500
+--- tlab_ued.train (plr, seed 0) ---
+  env_steps                   4096000
+  total_updates               500
+  reserved_updates            0
+  expected_gradient_updates   400.0
+  expected_mutation_updates   0.0
+  expected_dr_updates         100.0
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/wandb/offline-run-20260826_094121-vtip0rb3
+wandb: Find logs at: ./wandb/offline-run-20260826_094121-vtip0rb3/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+[1/2] solve_rate/mean=0.000 sps=51492 eta=0.01h
+Logging update: 500
+[2/2] solve_rate/mean=0.000 sps=98764 eta=0.00h
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/runs/_parity/runs/parity_plr/0/wandb/offline-run-20260826_094316-xvpx78rk
+wandb: Find logs at: ./runs/_parity/runs/parity_plr/0/wandb/offline-run-20260826_094316-xvpx78rk/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
+parity[plr, seed 0] over 2 eval steps: IDENTICAL
+  (NaN on both sides, treated as agreement: ['level_sampler/weighted_score'])
+--- upstream maze_plr.py (accel, seed 0) ---
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+Logging update: 500
+--- tlab_ued.train (accel, seed 0) ---
+  env_steps                   4096000
+  total_updates               500
+  reserved_updates            0
+  expected_gradient_updates   222.22222222222223
+  expected_mutation_updates   222.22222222222223
+  expected_dr_updates         55.55555555555554
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/wandb/offline-run-20260826_094441-kwe90hu0
+wandb: Find logs at: ./wandb/offline-run-20260826_094441-kwe90hu0/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+[1/2] solve_rate/mean=0.000 sps=45120 eta=0.01h
+Logging update: 500
+[2/2] solve_rate/mean=0.000 sps=88161 eta=0.00h
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/runs/_parity/runs/parity_accel/0/wandb/offline-run-20260826_094634-icjozomh
+wandb: Find logs at: ./runs/_parity/runs/parity_accel/0/wandb/offline-run-20260826_094634-icjozomh/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
+parity[accel, seed 0] over 2 eval steps: IDENTICAL
+
+All presets match upstream exactly.
+[09:48:15] stage checks: done
+[09:48:15] stage collect: start
+[09:48:15]   collect sfl_oracle_learnability_level_bfs seed 0 on minigrid_walls
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/TLabUED/src/tlab_ued/oracle_bench.py", line 884, in <module>
+    main()
+  File "/workspace/TLabUED/src/tlab_ued/oracle_bench.py", line 845, in main
+    collect_run(
+  File "/workspace/TLabUED/src/tlab_ued/oracle_bench.py", line 284, in collect_run
+    data = collect_checkpoint(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/workspace/TLabUED/src/tlab_ued/oracle_bench.py", line 224, in collect_checkpoint
+    train_state = train_state.replace(params=restore_params(step_dir))
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/TLabUED/src/tlab_ued/oracle_bench.py", line 108, in restore_params
+    tree = restore_tree(step_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/TLabUED/src/tlab_ued/buffer_diagnostics.py", line 96, in restore_tree
+    structure = _plain(checkpointer.metadata(path).item_metadata)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'item_metadata'
+[09:48:34] FATAL: stage collect failed (exit 1); fix it and re-run the same command to resume
+=== run_all exited 1 ===
