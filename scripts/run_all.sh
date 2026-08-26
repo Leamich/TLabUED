@@ -68,7 +68,11 @@ publish_log() {
   [ "$DRY_RUN" = "1" ] && return 0
   [ -f "$LOG" ] || return 0
   mkdir -p results/logs
-  sed -e "s#${GH_TOKEN}#***GH_TOKEN***#g" \
+  # Defaulted, not bare: `set -u` makes a bare ${GH_TOKEN} abort this function
+  # when the token is missing - and "the token is missing" is precisely the
+  # failure this function exists to report. The first pod died exactly here and
+  # billed an hour of A100 without saying a word.
+  sed -e "s#${GH_TOKEN:-__no_token__}#***GH_TOKEN***#g" \
       -e "s#${RUNPOD_API_KEY:-__none__}#***RUNPOD_API_KEY***#g" \
       -e 's#https://[^@/]*@github#https://***@github#g' \
       "$LOG" > "results/logs/run_all_${status}.log"

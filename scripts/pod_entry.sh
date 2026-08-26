@@ -106,6 +106,31 @@ publish() {
   cd "$REPO" || exit 1
   echo "repo at $(git rev-parse --short HEAD)"
 
+  # --- heartbeat: prove the return path before spending an hour on it -------
+  # Everything this pod will ever report travels over `git push`. If the token
+  # did not arrive, or the network cannot reach github, or the remote rejects
+  # us, then every later diagnostic is written to a disk that dies with the pod.
+  # So: push something trivial *now*, while the loss from being wrong is 90
+  # seconds instead of an hour. A missing heartbeat on the remote is the signal
+  # to kill the pod immediately - it means nothing else will ever arrive either.
+  {
+    # Presence only, never the value: this file is committed verbatim to a
+    # public repository, and `${VAR:+present}${VAR:-MISSING}` would print the
+    # token itself whenever it is set.
+    present() { [ -n "${1:-}" ] && echo present || echo MISSING; }
+    echo "pod        ${RUNPOD_POD_ID:-none}"
+    echo "stamp      $STAMP"
+    echo "commit     $(git rev-parse --short HEAD)"
+    echo "gpu        $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo none)"
+    echo "gh_token   $(present "${GH_TOKEN:-}")"
+    echo "runpod_key $(present "${RUNPOD_API_KEY:-}")"
+    echo "stop_after ${STOP_AFTER:-none}"
+  } > "/tmp/heartbeat_$STAMP.txt"
+  mkdir -p results/logs
+  cp "/tmp/heartbeat_$STAMP.txt" "results/logs/heartbeat_$STAMP.txt"
+  echo "--- heartbeat ---"
+  publish "heartbeat"
+
   echo "--- run_all ---"
   RUN_ALL_DETACHED=1 bash scripts/run_all.sh
   echo "=== run_all exited $? ==="
