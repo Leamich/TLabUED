@@ -285,6 +285,13 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" || return 1
   return 1
 }
 
+# Collected rollouts are pushed on their own, before anything is fitted to them.
+# They are the only artefact here that costs env steps and cannot be recomputed
+# from the repository, and `collect_run` skips any npz that already exists - so a
+# pod that dies (or is reaped by the watchdog) in `bench` costs a re-fit, while
+# one that dies before this push costs the whole GPU hour again.
+push_collect() { push_results "Add the collected rollouts the oracle bench is fitted to" results/bench/; }
+
 push_bench() { push_results "Add the offline oracle bench: population ceiling, feature ladder, staleness" results/; }
 
 # --- 5. pick ---------------------------------------------------------------
@@ -384,6 +391,7 @@ watchdog
 stage bootstrap bootstrap
 stage checks    checks
 stage collect   collect
+stage push_collect push_collect
 stage bench     bench
 stage push_bench push_bench
 stage pick      pick
