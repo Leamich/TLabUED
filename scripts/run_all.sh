@@ -186,17 +186,19 @@ checks() {
 collect() {
   resolve_py
   for spec in $BENCH_RUNS; do
-    local run_name="${spec%%:*}" seed="${spec##*:}" generators="minigrid_walls"
+    local run_name="${spec%%:*}" seed="${spec##*:}"
     if [ ! -d "checkpoints/$run_name/$seed/models" ]; then
       log "  no checkpoints for $run_name/$seed, skipping"
       continue
     fi
-    # The validation generator answers a question about *feature sets* - can a
-    # model fit on scattered walls rank structured mazes - and that does not vary
-    # with the training seed. Collecting it once per run rather than once per
-    # seed halves the only stage that costs env steps.
-    if [ "$seed" = "0" ]; then generators="minigrid_walls perfect_maze"; fi
-    for generator in $generators; do
+    # Both generators on every seed. A 384-level local probe found the trained
+    # policy at p = 0.990 (learnability 0.0011) on `minigrid_walls` but p = 0.810
+    # (learnability 0.0296) on `perfect_maze` - so the validation distribution
+    # carries ~27x the late headroom, and it is where the feature ladder has
+    # anything to separate. That makes it worth replicating across seeds rather
+    # than sampling once, and the same probe measured ~90k steps/s on a laptop
+    # CPU, so the extra collection is minutes on an A100.
+    for generator in minigrid_walls perfect_maze; do
       log "  collect $run_name seed $seed on $generator"
       run "$PY" -m tlab_ued.oracle_bench collect \
         --run "$run_name" --seed "$seed" --generator "$generator" \
