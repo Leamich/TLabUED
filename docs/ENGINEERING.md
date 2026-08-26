@@ -123,6 +123,46 @@ $PY -m tlab_ued.parity --presets dr plr accel --num_updates 500
 
 Полный прогон — 30000 апдейтов (~245M env-шагов), ~2.5 часа на A100 (девять параллельно под MPS).
 
+### Весь эксперимент одной командой
+
+На свежем поде код приезжает через `git clone`, а результаты уезжают через `git push` — ничего не
+копируется ни туда, ни обратно:
+
+```bash
+git clone https://github.com/Leamich/TLabUED && cd TLabUED && GH_TOKEN=... RUNPOD_API_KEY=... bash scripts/run_all.sh
+```
+
+[`scripts/run_all.sh`](../scripts/run_all.sh) отсоединяется (`setsid nohup`, лог в `run_all.log`),
+пишет маркер на каждую пройденную стадию в `.run_all/` и при повторном запуске той же команды
+продолжает с места обрыва — оборванный ssh прогон не убивает. Стадии: bootstrap, тесты и парити,
+сбор данных для бенча, бенч и устаревание, коммит результатов, выбор арма по преregistered-правилу,
+sweep из девяти прогонов, отчёт и коммит, выключение пода. `DRY_RUN=1` печатает команды вместо
+запуска и ничего не трогает — так стадии проверяются до того, как под создан. `TEARDOWN=0`
+оставляет под жить.
+
+### Офлайн-стенд оракула
+
+GPU нужен только на `collect`; остальное считается по уже собранным данным.
+
+```bash
+# измерить p на 8192 свежих уровнях под каждым чекпоинтом прогона
+$PY -m tlab_ued.oracle_bench collect --run sfl_oracle_learnability_level_bfs --seed 0
+$PY -m tlab_ued.oracle_bench collect --run sfl_oracle_learnability_level_bfs --seed 0 --generator perfect_maze
+
+# лестница признаков против потолка популяции
+$PY -m tlab_ued.oracle_bench bench --out results/oracle_bench.json
+
+# оракул с апдейта t против политики с t+delta, рядом с KL между политиками
+$PY -m tlab_ued.oracle_bench staleness --run sfl_oracle_learnability_level_bfs --seed 0
+
+# какой арм выбирает записанное заранее правило
+$PY -m tlab_ued.oracle_bench pick --report results/oracle_bench.json
+```
+
+`perfect_maze` — валидационный генератор (§TASK требует свой набор вместо восьми dev-уровней):
+рандомизированный DFS по чётной решётке, той же формы, что нарисованные вручную префабы, с
+медианой маршрута 30 шагов против 11 у `minigrid_walls`. В обучении не используется нигде.
+
 ---
 
 ## 4. Структура
@@ -133,6 +173,7 @@ src/tlab_ued/
   teachers/       стратегии отбора уровней: dr.py, plr.py, accel.py, sfl_accel.py, sfl_oracle.py
   scoring.py      реестр score-функций
   oracle.py       обучаемая модель p(solve | level)
+  oracle_bench.py офлайн-стенд: потолок популяции, лестница признаков, устаревание
   levels.py       реестр генераторов и мутаторов
   level_diagnostics.py  BFS по генерируемым уровням
   train.py        teacher-агностичный цикл обучения, чекпоинты, протокол оценки

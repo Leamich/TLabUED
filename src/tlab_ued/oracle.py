@@ -58,13 +58,67 @@ from flax import struct
 
 from tlab_ued.level_diagnostics import solve_levels
 
-# Feature sets, selected with `--oracle_features`. The ladder is an ablation:
-# "bfs" is a hand-designed difficulty heuristic with no vision, "level" is a
-# convnet that has to infer difficulty from the raw map, "level_bfs" is both.
-FEATURE_SETS = ("level", "level_bfs", "bfs")
+# A feature set is an underscore-joined set of tokens. At most one of them picks
+# the trunk that reads the map, and any number of them add scalars beside it:
+#
+#   level   the original trunk: 3x3, then two strided 3x3, then a dense layer
+#           over the flattened 3x3 result. It does reach the whole map - but only
+#           after two stride-2 steps, so each surviving cell is a blur of a 4x4
+#           block and the one-cell gaps that decide whether a corridor connects
+#           are averaged away. It learned "how open is this level" and not "how
+#           long is the route" (README §7.5).
+#   wide    the same idea with the stride removed and depth added, so spatial
+#           detail survives to the readout. Tests whether the original trunk
+#           failed for want of resolution rather than for want of capacity.
+#   prop    k iterations of a single shared 3x3 convolution (the value-iteration
+#           trunk of Tamar et al., 2016). Same parameters as one layer, but the
+#           computation it can express is "propagate reachability outward", which
+#           is the shape of the quantity BFS computes exactly.
+#   bfs     four scalars from an exact solve. Privileged: the ceiling, not a
+#           method. Never in a submitted arm.
+#   policy  two scalars the frozen student produces for free on the start frame.
+#           Honest - the teacher may read the student, it may not change it.
+#
+# The combinations below are the ones with a reason to exist; `parse_features`
+# accepts any of them and nothing else.
+FEATURE_SETS = (
+    "level",
+    "level_bfs",
+    "bfs",
+    "wide",
+    "prop",
+    "level_policy",
+    "wide_policy",
+    "prop_policy",
+    "wide_bfs",
+    "prop_bfs",
+)
+
+VISION_TOKENS = ("level", "wide", "prop")
 
 # capped optimal steps, solvable-within-the-episode, reachable fraction, wall density
-NUM_SCALAR_FEATURES = 4
+BFS_SCALARS = 4
+# V(s0) and the entropy of pi(s0), both at a zero LSTM carry.
+POLICY_SCALARS = 2
+
+
+def parse_features(features: str) -> frozenset:
+    """The token set of a feature name, validated."""
+    if features not in FEATURE_SETS:
+        raise ValueError(f"oracle_features={features!r}; expected one of {FEATURE_SETS}")
+    return frozenset(features.split("_"))
+
+
+def scalar_width(features: str) -> int:
+    """How wide the scalar vector is for this feature set.
+
+    Not a constant any more: `bfs` and `policy` contribute independently, and a
+    set with neither still carries a zero-width-free placeholder of 1 so that
+    every `OracleState` has the same rank regardless of configuration.
+    """
+    tokens = parse_features(features)
+    width = BFS_SCALARS * ("bfs" in tokens) + POLICY_SCALARS * ("policy" in tokens)
+    return max(width, 1)
 
 
 def encode_planes(levels) -> chex.Array:
@@ -115,6 +169,45 @@ def bfs_features(levels, max_steps_in_episode: int) -> chex.Array:
     )
 
 
+def binomial_nll(logits: chex.Array, attempts: chex.Array, successes: chex.Array) -> chex.Array:
+    """Mean per-episode binomial NLL of `successes` out of `attempts`.
+
+    -[s.log(p) + (n-s).log(1-p)] is `n.softplus(z) - s.z` for a logit z, which is
+    the numerically safe form. Dividing by n weights each *level* equally however
+    many times it was played; rows with n = 0 (empty ring slots online, padding
+    offline) contribute nothing.
+
+    Module-level so that `oracle_bench` fits its candidate models against exactly
+    the objective the online oracle is trained on - a bench that optimised
+    something else would be measuring a different model than the one that would
+    run.
+    """
+    nll = attempts * jax.nn.softplus(logits) - successes * logits
+    return (nll / jnp.maximum(attempts, 1.0)).sum() / jnp.maximum((attempts > 0).sum(), 1.0)
+
+
+def readout(x: chex.Array, planes: chex.Array) -> chex.Array:
+    """Pool a (n, H, W, C) feature map down to (n, 4C), keeping *where* it matters.
+
+    Global mean and max alone are translation invariant, which is wrong here: the
+    quantity being predicted is a property of the route between two particular
+    cells. `encode_planes` puts a one-hot for the goal in plane 1 and one for the
+    agent in plane 2, so multiplying by them and summing is a gather at those two
+    cells - the same readout a value-iteration network takes at the agent's
+    position, written so that `__call__` needs no extra arguments.
+    """
+    goal, agent = planes[..., 1:2], planes[..., 2:3]
+    return jnp.concatenate(
+        [
+            x.mean(axis=(1, 2)),
+            x.max(axis=(1, 2)),
+            (x * agent).sum(axis=(1, 2)),
+            (x * goal).sum(axis=(1, 2)),
+        ],
+        axis=-1,
+    )
+
+
 class OracleNet(nn.Module):
     """Level -> logit of the student's success probability.
 
@@ -125,16 +218,40 @@ class OracleNet(nn.Module):
 
     features: str = "level_bfs"
     hidden: int = 64
+    # Iterations of the shared convolution under `prop`. 16 > 13, so a signal can
+    # cross the whole map and come back.
+    prop_iters: int = 16
 
     @nn.compact
     def __call__(self, planes: chex.Array, scalars: chex.Array) -> chex.Array:
+        tokens = parse_features(self.features)
         parts = []
-        if "level" in self.features:
+        if "level" in tokens:
             x = nn.relu(nn.Conv(16, (3, 3))(planes))
             x = nn.relu(nn.Conv(32, (3, 3), strides=(2, 2))(x))
             x = nn.relu(nn.Conv(32, (3, 3), strides=(2, 2))(x))
             parts.append(x.reshape(x.shape[0], -1))
-        if "bfs" in self.features:
+        if "wide" in tokens:
+            # No stride: every layer adds 1 cell of radius, so five of them reach
+            # 11 cells in each direction and the final mean covers the rest. The
+            # cost of that is width, so the channel counts stay small.
+            x = planes
+            for _ in range(5):
+                x = nn.relu(nn.Conv(16, (3, 3))(x))
+            parts.append(readout(x, planes))
+        if "prop" in tokens:
+            # One shared convolution applied `prop_iters` times, i.e. a value
+            # iteration over the map: the parameter count of a single layer with
+            # the receptive field of sixteen. The skip from `planes` keeps the
+            # walls visible at every iteration rather than only at the first.
+            embed = nn.Conv(16, (3, 3), name="prop_in")(planes)
+            step = nn.Conv(16, (3, 3), name="prop_step")
+            skip = nn.Conv(16, (1, 1), name="prop_skip")
+            x = nn.relu(embed)
+            for _ in range(self.prop_iters):
+                x = nn.relu(step(x) + skip(embed))
+            parts.append(readout(x, planes))
+        if "bfs" in tokens or "policy" in tokens:
             parts.append(scalars)
         x = nn.relu(nn.Dense(self.hidden)(jnp.concatenate(parts, axis=-1)))
         # Zero-initialised head: an untrained oracle predicts p = 0.5 everywhere,
@@ -159,7 +276,7 @@ class OracleState:
     params: Any
     opt_state: Any
     levels: Any  # (capacity, ...) Level pytree
-    scalars: chex.Array  # (capacity, NUM_SCALAR_FEATURES), computed once at observation time
+    scalars: chex.Array  # (capacity, scalar_width(features)), computed at observation time
     attempts: chex.Array  # (capacity,) episodes played on that level
     successes: chex.Array  # (capacity,) of which this many reached the goal
     ptr: chex.Array  # next write position
@@ -177,7 +294,9 @@ class LearnabilityOracle:
     def __init__(self, config: Dict[str, Any], max_steps_in_episode: int):
         validate(config)
         self.features = str(config["oracle_features"])
-        self.use_bfs = "bfs" in self.features
+        self.tokens = parse_features(self.features)
+        self.use_bfs = "bfs" in self.tokens
+        self.scalar_width = scalar_width(self.features)
         self.capacity = int(config["oracle_buffer_capacity"])
         self.batch_size = int(config["oracle_batch_size"])
         self.train_steps = int(config["oracle_train_steps"])
@@ -192,7 +311,7 @@ class LearnabilityOracle:
         if self.use_bfs:
             scalars = bfs_features(levels, self.max_steps_in_episode)
         else:
-            scalars = jnp.zeros((planes.shape[0], NUM_SCALAR_FEATURES), dtype=jnp.float32)
+            scalars = jnp.zeros((planes.shape[0], self.scalar_width), dtype=jnp.float32)
         return planes, scalars
 
     # --- state ----------------------------------------------------------------
@@ -208,7 +327,7 @@ class LearnabilityOracle:
             params=params,
             opt_state=self.tx.init(params),
             levels=levels,
-            scalars=jnp.zeros((self.capacity, NUM_SCALAR_FEATURES), dtype=jnp.float32),
+            scalars=jnp.zeros((self.capacity, self.scalar_width), dtype=jnp.float32),
             # attempts = 0 makes an unwritten slot weightless in the loss, so the
             # ring needs no separate validity mask.
             attempts=zeros,
@@ -250,16 +369,8 @@ class LearnabilityOracle:
         )
 
     def loss_fn(self, params, planes, scalars, attempts, successes) -> chex.Array:
-        """Mean per-episode binomial NLL over the levels in a minibatch.
-
-        -[s.log(p) + (n-s).log(1-p)] is `n.softplus(z) - s.z` for a logit z, which
-        is the numerically safe form. Dividing by n weights each *level* equally
-        however many times it was played; empty ring slots have n = 0 and
-        contribute nothing.
-        """
-        z = self.net.apply(params, planes, scalars)
-        nll = attempts * jax.nn.softplus(z) - successes * z
-        return (nll / jnp.maximum(attempts, 1.0)).sum() / jnp.maximum((attempts > 0).sum(), 1.0)
+        """Mean per-episode binomial NLL over the levels in a minibatch."""
+        return binomial_nll(self.net.apply(params, planes, scalars), attempts, successes)
 
     def train(self, state: OracleState, rng: chex.PRNGKey) -> OracleState:
         """`--oracle_train_steps` Adam steps on minibatches drawn from the ring.
@@ -328,10 +439,20 @@ def calibration(predicted: chex.Array, measured: chex.Array) -> Dict[str, chex.A
 
 def validate(config: Dict[str, Any]) -> None:
     """Fail before the first rollout rather than inside a jitted branch."""
-    if config["oracle_features"] not in FEATURE_SETS:
+    tokens = parse_features(str(config["oracle_features"]))
+    if "policy" in tokens:
+        # The policy scalars need the student's parameters, which `features_of`
+        # does not have: only `oracle_bench` assembles them, from a checkpoint.
+        # Screening a `policy` arm offline is free; putting it on the training
+        # path is a separate change, and this stops a run starting as if it had
+        # already been made.
         raise ValueError(
-            f"oracle_features={config['oracle_features']!r}; expected one of {FEATURE_SETS}"
+            f"oracle_features={config['oracle_features']!r} is a bench-only feature set: "
+            "the policy scalars are not plumbed into the teacher. Screen it with "
+            "`python -m tlab_ued.oracle_bench bench` first."
         )
+    if not tokens & set(VISION_TOKENS) and "bfs" not in tokens:
+        raise ValueError(f"oracle_features={config['oracle_features']!r} would see nothing")
     for key in ("oracle_buffer_capacity", "oracle_batch_size", "oracle_hidden"):
         if int(config[key]) <= 0:
             raise ValueError(f"{key} must be positive, got {config[key]}")

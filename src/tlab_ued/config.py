@@ -209,6 +209,15 @@ def _oracle_presets() -> Dict[str, Dict[str, Any]]:
         # summary of it enough - or vice versa?
         "sfl_oracle_level": {**base, "oracle_features": "level"},
         "sfl_oracle_bfs": {**base, "oracle_features": "bfs"},
+        # The honest arms. `level` failed on exactly the long-route levels
+        # (README §7.5), which is what a trunk whose receptive field is smaller
+        # than the corridor would do whether or not it could learn the concept.
+        # These two separate those cases: `wide` gives it the field, `prop`
+        # gives it the field *and* the computation - a convolution applied
+        # repeatedly, which is what propagating reachability looks like.
+        # Screened first by `oracle_bench`; only the winner is worth a full run.
+        "sfl_oracle_wide": {**base, "oracle_features": "wide"},
+        "sfl_oracle_prop": {**base, "oracle_features": "prop"},
         # ACCEL's blind mutation, with the oracle still driving the phase.
         "sfl_oracle_nomut": {**base, "oracle_mutation_proposals": 1},
     }

@@ -14,3 +14,7 @@ __pycache__/
 .venv/
 
 # notebook outputs are stripped before committing (see README)
+
+# run_all.sh bookkeeping (stage markers and its log)
+.run_all/
+run_all.log
