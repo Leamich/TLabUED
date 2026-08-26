@@ -57,7 +57,31 @@ PY="${PY:-}"  # resolved by the bootstrap stage
 
 log() { echo "[$(date -u +%H:%M:%S)] $*"; }
 
-die() { log "FATAL: $*"; exit 1; }
+# A headless pod has no other way to say what went wrong: no ssh key, no volume,
+# and the disk dies with it. So the log itself is an artefact - pushed on the way
+# out, success or failure, with every secret removed first.
+#
+# The scrub is not belt-and-braces: the repository is public, and a token that
+# reaches it is a token that has to be revoked.
+publish_log() {
+  local status="$1"
+  [ "$DRY_RUN" = "1" ] && return 0
+  [ -f "$LOG" ] || return 0
+  mkdir -p results/logs
+  sed -e "s#${GH_TOKEN}#***GH_TOKEN***#g" \
+      -e "s#${RUNPOD_API_KEY:-__none__}#***RUNPOD_API_KEY***#g" \
+      -e 's#https://[^@/]*@github#https://***@github#g' \
+      "$LOG" > "results/logs/run_all_${status}.log"
+  push_results "Add the pod's own run log ($status)" results/logs/ || true
+}
+
+die() {
+  log "FATAL: $*"
+  publish_log failed
+  # Still let the watchdog own the pod's lifetime: a failed run that leaves the
+  # GPU billing is worse than a failed run.
+  exit 1
+}
 
 run() {
   if [ "$DRY_RUN" = "1" ]; then
@@ -108,17 +132,23 @@ preflight() {
   # normally a developer's own clone, and rewriting its remote to carry a token
   # would be both surprising and a way to leak one.
   if [ "$DRY_RUN" = "1" ]; then
-    echo "    would set git identity and add the token to origin's URL"
+    echo "    would set the git identity and a token credential helper"
     return 0
   fi
 
   git config user.name  "${GIT_NAME:-Mikhail Leontyev}"
   git config user.email "${GIT_EMAIL:-michlea.tlt@gmail.com}"
-  # The token lives in the remote URL for this clone only, and `git remote -v`
-  # is the one place it could leak into a log - so it is never echoed.
-  local remote
-  remote="$(git config --get remote.origin.url | sed -E 's#https://[^@]*@#https://#')"
-  git remote set-url origin "$(echo "$remote" | sed -E "s#https://#https://${GH_TOKEN}@#")"
+
+  # Authenticate with a credential helper rather than by putting the token in
+  # the remote URL. The difference matters because this repository is public and
+  # this script pushes its own log: git prints the remote URL verbatim in error
+  # messages ("unable to access 'https://TOKEN@github.com/...'"), so a token in
+  # the URL is one failed push away from being published. The helper keeps the
+  # URL clean and reads the token from the environment at each use.
+  git config --local credential.helper \
+    '!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'
+  git config --local --unset-all remote.origin.url 2>/dev/null
+  git config --local remote.origin.url "https://github.com/Leamich/TLabUED"
 
   git ls-remote --exit-code origin >/dev/null 2>&1 \
     || die "cannot reach origin with this GH_TOKEN"
@@ -355,5 +385,6 @@ stage push_bench push_bench
 stage pick      pick
 stage sweep     sweep
 stage report    report
-stage teardown  teardown
 log "=== run_all finished ==="
+publish_log ok
+stage teardown  teardown
