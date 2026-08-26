@@ -18,3 +18,8 @@ moviepy<2
 # Analysis only (not needed to train).
 pandas
 matplotlib
+
+# The test suite. Not needed to train, but `scripts/run_all.sh` runs it as the
+# gate before every stage that costs GPU time, and a pod whose venv cannot run
+# the tests fails that gate having already paid for the bootstrap.
+pytest
