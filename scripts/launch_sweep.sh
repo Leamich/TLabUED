@@ -57,13 +57,19 @@ gpu_slug() {
   nvidia-smi --query-gpu=name --format=csv,noheader | head -1 | tr -cs 'A-Za-z0-9' '_' | sed 's/_$//'
 }
 
+mps_running() {
+  pgrep -f "nvidia-cuda-mps-control -d" >/dev/null 2>&1
+}
+
 start_mps() {
   if ! command -v nvidia-cuda-mps-control >/dev/null 2>&1; then
     log "WARNING: nvidia-cuda-mps-control not found - trainers will time-slice the GPU (~3x slower in total)"
     return 0
   fi
   mkdir -p "$CUDA_MPS_PIPE_DIRECTORY" "$CUDA_MPS_LOG_DIRECTORY"
-  if pgrep -x nvidia-cuda-mps-control >/dev/null 2>&1; then
+  # Not `pgrep -x`: the kernel truncates the process name to 15 characters
+  # ("nvidia-cuda-mps"), so an exact match never finds a running daemon.
+  if mps_running; then
     log "MPS daemon already running"
     return 0
   fi
@@ -285,7 +291,7 @@ for row in rows:
     print(f"{row[0]:<32}{row[1]:<13}{row[2]:<10}{row[3]}")
 PYSTATUS
   nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu,utilization.memory --format=csv
-  pgrep -x nvidia-cuda-mps-control >/dev/null && echo "MPS: running" || echo "MPS: NOT running"
+  mps_running && echo "MPS: running" || echo "MPS: NOT running"
   tail -3 push.log 2>/dev/null || true
 }
 
