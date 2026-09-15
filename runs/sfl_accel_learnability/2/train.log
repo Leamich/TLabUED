@@ -253,3 +253,122 @@ Logging update: 27250
 [109/120] solve_rate/mean=0.575 sps=7476573 eta=0.09h
 Logging update: 27500
 [110/120] solve_rate/mean=0.600 sps=7464101 eta=0.08h
+Logging update: 27750
+[111/120] solve_rate/mean=0.663 sps=7370309 eta=0.08h
+Logging update: 28000
+[112/120] solve_rate/mean=0.637 sps=7486147 eta=0.07h
+Logging update: 28250
+[113/120] solve_rate/mean=0.188 sps=7668456 eta=0.06h
+Logging update: 28500
+[114/120] solve_rate/mean=0.562 sps=7672382 eta=0.05h
+Logging update: 28750
+[115/120] solve_rate/mean=0.338 sps=7718493 eta=0.04h
+Logging update: 29000
+[116/120] solve_rate/mean=0.350 sps=7694159 eta=0.03h
+Logging update: 29250
+[117/120] solve_rate/mean=0.312 sps=7779577 eta=0.03h
+Logging update: 29500
+[118/120] solve_rate/mean=0.312 sps=7856475 eta=0.02h
+Logging update: 29750
+[119/120] solve_rate/mean=0.387 sps=8051951 eta=0.01h
+Logging update: 30000
+[120/120] solve_rate/mean=0.312 sps=8018947 eta=0.00h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:              agent/actor_loss █▆▆▅▁▂▃▃▂▁▂▂▂▂▂▃▂▃▁▂▂▃▃▂▂▂▂▃▂▃▂▃▃▃▂▂▃▃▃▃
+wandb:             agent/critic_loss ▁▂▆▆▅▅▅▆▇▇▆▆▆▆▇▇▇▆█▇▇▇▆▇▇▇██▇▆▇▇█▇▇▇█▇▇▇
+wandb:                 agent/entropy █▄▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                    agent/loss ▁▂▆▆▅▅▆▇▇▇▇▆▆▇▇▇▇▇█▇▇█▇▇▇▇██▇▇▇▇█▇▇▇█▇▇▇
+wandb:         branch/num_dr_updates ▁███████████████████████████████████████
+wandb:   branch/num_mutation_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:     branch/num_replay_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:        branch/num_sfl_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:          eval_ep_lengths/mean ███▇▇▅▇█▆▇▆█▆▄▅▄▄▄▄▅▄▅▄▃▅▅▇▄▅▆▅▄▅▃▁▅▃▇▄▆
+wandb:         level/mean_num_blocks ▁▂▂▂▂▂▂▃▃▃▄▄▅▅▄▅▅▅▅▆▆▆▇▆▆▆▆▇▇▇▇▇▇▇▇█████
+wandb:   level_sampler/episode_count ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:       level_sampler/max_score ████████▇█▃██▅▇███▆██▃█▆███▆▆▇▁███▄▄▇██▇
+wandb: level_sampler/mean_max_return ▁▃▅▇███████████████████████▇▇▇▇▇▇▇▇▇▇▇▇▇
+wandb:          level_sampler/mean_p ▁▂▃▄▅▆▇▇▇████████▇▇▇▇▇██████████████████
+wandb:      level_sampler/mean_score ▁▄▆██▇▆▅▅▄▄▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂
+wandb:            level_sampler/size ▁███████████████████████████████████████
+wandb:  level_sampler/weighted_score ▃▅▇██▇▆▄▄▄▃▄▄▃▃▃▃▃▃▃▃▃▃▃▃▁▂▂▃▂▂▃▂▂▂▂▂▁▂▂
+wandb:                 num_env_steps ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:                   num_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:              return/Labyrinth ▁▁▁▁▁▁▁▁▁▁▁▄▁▇▇▄▇▇▆▂█▁▆▃▁▁▁█▇▁▁▁▁▃▃▁▄▁▁▁
+wandb:             return/Labyrinth2 ▁▁▁▁▁▂▁▂▁▁▁▁▅▇▃▃▆▄▇▃▇▁▁▁▂▁▁▁▁▁▁▁▁▁█▁▁▁▁▁
+wandb:       return/LabyrinthFlipped ▁▁▁▁▁▁▁▁▁▁▁▁▅▂▁▂▆▂▁▁▇▁▁▁▁▁▁▂▁▁▁▁▁▄█▁▂▁▁▁
+wandb:           return/SixteenRooms ▁▁▃▄▃▆▆▆▅▆▆▇▅▇▆▆▇▇▆▆▇█▆█▅▅▆█▄▆███████▂█▇
+wandb:          return/SixteenRooms2 ▁▁▁▁▂▂▁▁▁▁▁▁▂▁▁▄▂▂▃▃▅▅▇▇▅▇▄▇▇██▇████▆█▇▆
+wandb:           return/StandardMaze ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▄▁▁▁▆▆▂▂▄▁▂▃▂▁▁▁▁▁▆██▂▄▁
+wandb:          return/StandardMaze2 ▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▄▄▂▃▂▂▁▁▅▁▄█▁▆▃▂▂
+wandb:          return/StandardMaze3 ▁▁▁▁▁▅▁▄▄▄▃▄▇▇▆▆▃█▆▃▁▁▅▇▇▅▄▂▂▃▁▂▁▃▂▂▂▁▁▂
+wandb:                   return/mean ▁▁▁▂▂▃▂▃▃▃▃▃▅▅▄▅▆▆▆▄▆▄▅▆▅▄▄▆▄▄▄▅▄▆█▅▆▃▅▄
+wandb:   sfl/population_learnability ▄█▄▃▃▂▂▁▂▂▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         sfl/topk_learnability ▇█▇▇▇▅▄▃▄▄▂▂▂▂▂▂▃▂▃▃▁▂▂▃▂▂▂▂▂▂▂▂▁▁▁▁▂▂▂▂
+wandb:          solve_rate/Labyrinth ▁▁▁▁▁▁▁▁▁▂▂▅▁██▅███▂▇▁▆▅▁▁▁██▁▁▁▁▅▃▁▅▁▂▂
+wandb:         solve_rate/Labyrinth2 ▁▁▁▁▁▂▁▄▁▁▁▁▅▇▂▅▆▅▇▅█▂▁▁▂▁▁▁▁▁▁▁▁▁▇▁▁▁▁▁
+wandb:   solve_rate/LabyrinthFlipped ▁▁▁▁▁▁▁▁▁▁▁▁▇▂▁▃▇▃▁▁█▁▁▁▁▁▁▂▁▁▁▁▁▅█▁▂▁▁▁
+wandb:       solve_rate/SixteenRooms ▁▂▄▇▄▇█████▇▇██▇████████▇▅▇█▆▇███████▂█▇
+wandb:      solve_rate/SixteenRooms2 ▁▁▁▁▂▅▂▁▂▂▁▂▂▁▂▆▃▄▇▇▇█▇█▇█▆█████████████
+wandb:       solve_rate/StandardMaze ▁▁▁▁▁▁▁▁▁▁▁▁▁▂▁▂▅▁▂▁▆▅▂▂▅▁▂▃▂▁▁▁▁▁█▇█▂▅▁
+wandb:      solve_rate/StandardMaze2 ▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▄▅▂▃▂▂▁▁▇▁▆█▂▆▃▂▂
+wandb:      solve_rate/StandardMaze3 ▁▁▁▁▁▆▁▆▆▅▅▅███▇▅█▇▅▁▁▅███▆▄▂▆▁▃▁▇▂▅▃▁▁▃
+wandb:               solve_rate/mean ▁▁▁▂▂▃▂▃▃▃▃▃▅▅▅▅▇▆▆▄▇▄▅▆▆▄▄▆▄▄▃▄▃▆█▅▆▃▄▄
+wandb:                           sps ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇████
+wandb:              steps_per_second ▁████████████████▇██████████████████████
+wandb:                    time_delta █▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:            train/learnability ▁█▆▅▅▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
+wandb:            train/success_rate ▁▄▇▇█████████████▇██████████████████████
+wandb: 
+wandb: Run summary:
+wandb:              agent/actor_loss -0.00033
+wandb:             agent/critic_loss 0.01389
+wandb:                 agent/entropy 0.0206
+wandb:                    agent/loss 0.0066
+wandb:         branch/num_dr_updates 242
+wandb:   branch/num_mutation_updates 13199
+wandb:     branch/num_replay_updates 13199
+wandb:        branch/num_sfl_updates 3360
+wandb:          eval_ep_lengths/mean 212.5
+wandb:         level/mean_num_blocks 41.54313
+wandb:   level_sampler/episode_count 533736
+wandb:       level_sampler/max_score 0.248
+wandb: level_sampler/mean_max_return 0.85186
+wandb:          level_sampler/mean_p 0.88277
+wandb:      level_sampler/mean_score 0.0729
+wandb:            level_sampler/size 4000
+wandb:  level_sampler/weighted_score 0.19465
+wandb:                 num_env_steps 245760000
+wandb:                   num_updates 30000
+wandb:              return/Labyrinth 0.01324
+wandb:             return/Labyrinth2 0.0
+wandb:       return/LabyrinthFlipped 0.0
+wandb:           return/SixteenRooms 0.70272
+wandb:          return/SixteenRooms2 0.52768
+wandb:           return/StandardMaze 0.0
+wandb:          return/StandardMaze2 0.04664
+wandb:          return/StandardMaze3 0.09912
+wandb:                   return/mean 0.17367
+wandb:   sfl/population_learnability 0.0053
+wandb:         sfl/topk_learnability 0.03711
+wandb:          solve_rate/Labyrinth 0.1
+wandb:         solve_rate/Labyrinth2 0.0
+wandb:   solve_rate/LabyrinthFlipped 0.0
+wandb:       solve_rate/SixteenRooms 0.9
+wandb:      solve_rate/SixteenRooms2 1.0
+wandb:       solve_rate/StandardMaze 0.0
+wandb:      solve_rate/StandardMaze2 0.2
+wandb:      solve_rate/StandardMaze3 0.3
+wandb:               solve_rate/mean 0.3125
+wandb:                           sps 8018947.06969
+wandb:              steps_per_second 66824.55891
+wandb:                    time_delta 30.64742
+wandb:            train/learnability 0.09017
+wandb:            train/success_rate 0.77247
+wandb: 
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/runs/sfl_accel_learnability/2/wandb/offline-run-20260915_125032-omkkf9pe
+wandb: Find logs at: ./runs/sfl_accel_learnability/2/wandb/offline-run-20260915_125032-omkkf9pe/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.
