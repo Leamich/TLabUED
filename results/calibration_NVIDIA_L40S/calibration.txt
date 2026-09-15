@@ -1,0 +1,13 @@
+gpu: NVIDIA_L40S
+concurrent smoke runs: 5, finished: 5
+  sfl_accel:0                          44765 env-steps/s
+  sfl_accel_cheap:0                    43521 env-steps/s
+  sfl_oracle_level:0                   33539 env-steps/s
+  sfl_oracle_level_nomut:0             34722 env-steps/s
+  sfl_oracle_level_noverify:0          32729 env-steps/s
+aggregate throughput at 5 concurrent: 189275 env-steps/s
+GPU memory: total 46068 MiB, peak used 28104 MiB
+peak per trainer: 7992 MiB
+GPU util median 1%, memory util median 0%
+recommended: MAX_PARALLEL=4 MEM_FRACTION=0.226
+ETA for 12 full runs: 4.3-4.3 h (linear scaling from 5 to 4 trainers .. no gain beyond 5); smoke evals are lighter than full ones, refine from the first eval steps of the sweep
