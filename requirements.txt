@@ -15,9 +15,10 @@ imageio
 # numpy via moviepy.editor, which moviepy 2.x removed.
 moviepy<2
 
-# Analysis only (not needed to train).
+# Analysis only (not needed to train). tabulate backs DataFrame.to_markdown in scripts/report.py.
 pandas
 matplotlib
+tabulate
 
 # The test suite. Not needed to train.
 pytest

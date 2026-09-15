@@ -11,10 +11,10 @@ just as well on a laptop after copying `runs/` off the pod. Writes:
     results/final_table.csv          per-method final solve rate
     results/per_level_table.csv      per-method, per-level solve rate
 
-The curriculum figure is the one worth reading first: with one seed per method
-the solve-rate gap is inside seed noise, but `train/success_rate` and the SFL
-selection gain are per-run measurements of whether the mechanism did what it
-claims, and those do not need a second seed to be informative.
+By default only the configurations the README reports are included; `--all_runs`
+adds everything else under `runs/` (the ablations of the upper bound). Final
+numbers use the README's aggregation: an EMA with gamma = 0.8 over each seed's
+evaluations, averaged over seeds.
 """
 
 from __future__ import annotations
@@ -38,14 +38,26 @@ from tlab_ued.analysis import (  # noqa: E402
     throughput,
 )
 
+# The configurations the README reports. Everything else under runs/ is left out
+# of the figures and tables unless --all_runs is given.
+REPORT_RUNS = (
+    "dr",
+    "plr_maxmc",
+    "accel_maxmc",
+    "sfl_accel_learnability",
+    "sfl_oracle_learnability_level",
+    "sfl_accel_learnability_n64",
+    "sfl_oracle_learnability_level_bfs",
+)
+
 # Columns a teacher logs about its own curriculum, and how to read them.
 CURRICULUM_PANELS = [
     (
         "train/success_rate",
-        "Success rate on the training batch",
-        "p on the levels the student is being trained on. SFL's claim is that\n"
-        "this sits near 0.5; a curriculum drifting to 0 is showing impossible\n"
-        "levels, to 1 trivial ones.",
+        "Success rate logged during training",
+        "Mean over every rollout of the last 250 updates. On replay it is the\n"
+        "smoothed stored p of the replayed levels, elsewhere p measured over 4\n"
+        "envs per level - not the success rate of the gradient batch alone.",
     ),
     (
         "train/learnability",
@@ -64,27 +76,6 @@ CURRICULUM_PANELS = [
         "Structural complexity of what the curriculum produces, and the one\n"
         "curriculum column every teacher logs - so it compares across methods.",
     ),
-    (
-        "oracle/selection_gain",
-        "Oracle selection gain (measured)",
-        "Learnability of the levels the oracle picked over the uniformly drawn\n"
-        "controls measured beside them. 1.0 is chance. Out of sample: it commits\n"
-        "to a ranking over 8192 levels, and only then do the rollouts run.",
-    ),
-    (
-        "oracle/control_rank_corr",
-        "Oracle rank correlation on the controls",
-        "Spearman between predicted and measured p on the uniform controls. The\n"
-        "shortlist version (oracle/rank_corr) is range-restricted by the very\n"
-        "selection that produced it, so this is the honest one.",
-    ),
-    (
-        "oracle/control_brier",
-        "Oracle calibration off its own distribution",
-        "Brier score on uniformly drawn levels. Most of the oracle's training\n"
-        "data is buffer levels, so this is the extrapolation it is asked to do\n"
-        "every phase.",
-    ),
 ]
 
 # Panels that only mean something as a pair: the point is the gap between two
@@ -101,14 +92,14 @@ PAIRED_PANELS = [
         "phase is wasted budget.",
     ),
     (
-        "oracle/predicted_learnability",
         "oracle/selected_learnability",
-        "predicted",
-        "realised",
-        "Oracle: the winner's curse",
-        "What the oracle expected of its picks, against what the rollouts then\n"
-        "found. An argmax over a prediction selects partly for the prediction\n"
-        "being wrong; the gap is that error, and is what verification absorbs.",
+        "oracle/control_learnability",
+        "picked",
+        "control",
+        "Oracle: picked vs uniformly drawn levels",
+        "Measured learnability of the levels the oracle picked, against the uniform\n"
+        "controls measured in the same rollouts. The summary's gain is the ratio\n"
+        "of their means over all phases, not the mean of per-phase ratios.",
     ),
     (
         "oracle/buffer_mean_p",
@@ -180,39 +171,23 @@ def plot_curriculum(df: pd.DataFrame, out_path: str) -> List[str]:
     return [c for c, _, _ in available] + [f"{a} vs {b}" for a, b, *_ in paired]
 
 
-# The oracle's self-measurement, averaged over the phases of a run. Every one of
-# these is a comparison the run performed on itself against ground truth, so
-# unlike the solve rate they carry an argument at one seed.
-ORACLE_COLUMNS = {
-    "oracle/selection_gain": "gain",
-    "oracle/selected_learnability": "picked",
-    "oracle/control_learnability": "control",
-    "oracle/predicted_learnability": "predicted",
-    "oracle/control_rank_corr": "rank corr",
-    "oracle/control_brier": "brier",
-    "oracle/loss": "loss",
-}
+def oracle_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Per-run oracle selection: picked vs control learnability over all phases.
 
-
-def oracle_table(df: pd.DataFrame, warmup_updates: int = 1000) -> pd.DataFrame:
-    """Per-run oracle diagnostics, over the phases where the ranking was used.
-
-    Rows before `warmup_updates` are dropped: until then the shortlist is drawn
-    at random on purpose, so a selection gain from that period measures nothing.
+    `gain` is the ratio of the two means, not the mean of the logged per-phase
+    `oracle/selection_gain`: late in training both groups measure close to zero,
+    and an average of per-phase ratios is mostly an average of that noise.
     """
-    present = {c: n for c, n in ORACLE_COLUMNS.items() if c in df.columns}
-    if not present:
+    columns = ["oracle/selected_learnability", "oracle/control_learnability"]
+    if not set(columns) <= set(df.columns):
         return pd.DataFrame()
-    warm = df[df["num_updates"] >= warmup_updates]
-    out = warm.groupby(["run_name", "seed"])[list(present)].mean()
-    out = out.rename(columns=present).dropna(how="all")
-    # `--no-oracle_verify` never measures a shortlist, so its phase statistics
-    # stay at their zero initialisation. An all-zero row is the absence of a
-    # measurement, not a measurement of zero, so drop it rather than print it.
-    measured = [c for c in ("gain", "picked", "predicted") if c in out.columns]
-    if measured:
-        out = out[out[measured].abs().sum(axis=1) > 0]
-    return out.round(3)
+    out = df.groupby(["run_name", "seed"])[columns].mean()
+    out.columns = ["picked", "control"]
+    # `--no-oracle_verify` never measures a shortlist, so its statistics stay at
+    # their zero initialisation - the absence of a measurement, not a zero.
+    out = out[(out["picked"] > 0) & (out["control"] > 0)]
+    out["gain"] = out["picked"] / out["control"]
+    return out.round(4)
 
 
 def budget_table(df: pd.DataFrame) -> pd.DataFrame:
@@ -234,12 +209,30 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out_dir", type=str, default=".")
     parser.add_argument(
+        "--ema_gamma",
+        type=float,
+        default=0.8,
+        help="final number of a seed: EMA over all its evaluations with this gamma",
+    )
+    parser.add_argument(
         "--last_k",
         type=int,
-        default=3,
-        help="average the last k evaluations for the final numbers",
+        default=None,
+        help="use the mean of the last k evaluations instead of the EMA",
+    )
+    parser.add_argument(
+        "--all_runs",
+        action="store_true",
+        help="include every run under runs/, not only the configurations the README reports",
     )
     args = parser.parse_args()
+    ema_gamma = None if args.last_k is not None else args.ema_gamma
+    last_k = args.last_k or 1
+    aggregation = (
+        f"the mean of the last {last_k} evaluations of each seed"
+        if ema_gamma is None
+        else f"an EMA (gamma = {ema_gamma}) over all evaluations of each seed"
+    )
 
     df = load_runs(args.out_dir)
     if df.empty:
@@ -249,6 +242,8 @@ def main() -> None:
     # Short diagnostic runs, not experiments: they share the run directory but
     # not the budget, so averaging them into any table is misleading.
     df = df[~df["run_name"].str.startswith("oracle_probe")]
+    if not args.all_runs:
+        df = df[df["run_name"].isin(REPORT_RUNS)]
 
     results = os.path.join(args.out_dir, "results")
     figs = os.path.join(results, "figs")
@@ -256,15 +251,15 @@ def main() -> None:
 
     fig, axes = plt.subplots(2, 1, figsize=(11, 10))
     plot_curves(df, ax=axes[0])
-    plot_per_level(df, ax=axes[1], last_k=args.last_k)
+    plot_per_level(df, ax=axes[1], last_k=last_k, ema_gamma=ema_gamma)
     fig.tight_layout()
     fig.savefig(os.path.join(figs, "solve_rate.png"), dpi=150, bbox_inches="tight")
     plt.close(fig)
 
     plotted = plot_curriculum(df, os.path.join(figs, "curriculum.png"))
 
-    final = final_table(df, last_k=args.last_k)
-    per_level = per_level_table(df, last_k=args.last_k).round(3)
+    final = final_table(df, last_k=last_k, ema_gamma=ema_gamma)
+    per_level = per_level_table(df, last_k=last_k, ema_gamma=ema_gamma).round(3)
     speed = throughput(df).round(1)
     budget = budget_table(df)
 
@@ -284,7 +279,7 @@ def main() -> None:
     lines = [
         "# Results",
         "",
-        f"Final numbers average the last {args.last_k} evaluations of each seed.",
+        f"The final number of a seed is {aggregation}; a method's is the mean over seeds.",
         "",
         "## Runs",
         "",
@@ -310,12 +305,11 @@ def main() -> None:
     oracle = oracle_table(df)
     if not oracle.empty:
         lines += [
-            "## Oracle diagnostics",
+            "## Oracle selection",
             "",
-            "Averaged over the phases after warm-up. `gain` is measured learnability of the "
-            "oracle's picks over the uniform controls beside them (1.0 = chance); `predicted` "
-            "against `picked` is the winner's curse; `rank corr` and `brier` are on the controls, "
-            "the only sample the selection did not restrict.",
+            "Mean over all SFL phases of the measured learnability of the levels the oracle "
+            "picked (`picked`) and of the uniformly drawn controls measured in the same rollouts "
+            "(`control`); `gain` is the ratio of those means (1.0 = chance).",
             "",
             oracle.to_markdown(),
             "",

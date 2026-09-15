@@ -93,23 +93,58 @@ def plot_curves(
     return ax
 
 
-def final_table(
-    df: pd.DataFrame, metric: str = "solve_rate/mean", group: str = "run_name", last_k: int = 1
-) -> pd.DataFrame:
-    """Per-method final score: mean over seeds of each seed's last `last_k` evals.
+def ema(values: Sequence[float], gamma: float) -> float:
+    """Exponential smoothing `s <- gamma * s + (1 - gamma) * x`, seeded with the first value.
 
-    `last_k > 1` averages the tail of training, which is less noisy than a single
-    evaluation point and is the fairer number to quote.
+    Every evaluation of a run contributes, and roughly the last `1 / (1 - gamma)`
+    of them dominate - which keeps the number on the end of training without
+    resting on one noisy evaluation.
     """
-    tails = (
-        df.sort_values("num_updates")
-        .groupby([group, "seed"])
-        .tail(last_k)
-        .groupby([group, "seed"])[metric]
-        .mean()
-        .reset_index()
+    values = np.asarray(values, dtype=float)
+    if values.size == 0:
+        return float("nan")
+    smoothed = values[0]
+    for value in values[1:]:
+        smoothed = gamma * smoothed + (1.0 - gamma) * value
+    return float(smoothed)
+
+
+def per_seed_final(
+    df: pd.DataFrame,
+    columns: Sequence[str],
+    group: str = "run_name",
+    last_k: int = 1,
+    ema_gamma: Optional[float] = None,
+) -> pd.DataFrame:
+    """One final value per (group, seed) and column.
+
+    The mean of the last `last_k` evaluations, or - when `ema_gamma` is given - the
+    EMA over all of them in update order.
+    """
+    ordered = df.sort_values("num_updates")
+    if ema_gamma is None:
+        return ordered.groupby([group, "seed"]).tail(last_k).groupby([group, "seed"])[
+            list(columns)
+        ].mean()
+    return ordered.groupby([group, "seed"])[list(columns)].agg(
+        lambda series: ema(series.dropna(), ema_gamma)
     )
-    out = tails.groupby(group)[metric].agg(["mean", "std", "count"]).reset_index()
+
+
+def final_table(
+    df: pd.DataFrame,
+    metric: str = "solve_rate/mean",
+    group: str = "run_name",
+    last_k: int = 1,
+    ema_gamma: Optional[float] = None,
+) -> pd.DataFrame:
+    """Per-method final score: mean over seeds of each seed's final value.
+
+    A seed's final value is the mean of its last `last_k` evals, or the EMA of all
+    its evals when `ema_gamma` is given. The README quotes the EMA with gamma = 0.8.
+    """
+    per_seed = per_seed_final(df, [metric], group, last_k, ema_gamma).reset_index()
+    out = per_seed.groupby(group)[metric].agg(["mean", "std", "count"]).reset_index()
     out["sem"] = out["std"] / np.sqrt(out["count"].clip(lower=1))
     return out.sort_values("mean", ascending=False).reset_index(drop=True)
 
@@ -119,20 +154,26 @@ def per_level_table(
     levels: Sequence[str] = tuple(EVAL_LEVELS),
     group: str = "run_name",
     last_k: int = 1,
+    ema_gamma: Optional[float] = None,
 ) -> pd.DataFrame:
     """Final solve rate per held-out level - which levels a method wins or loses."""
     columns = [f"solve_rate/{name}" for name in levels if f"solve_rate/{name}" in df.columns]
-    tails = df.sort_values("num_updates").groupby([group, "seed"]).tail(last_k)
-    out = tails.groupby(group)[columns].mean()
+    out = per_seed_final(df, columns, group, last_k, ema_gamma).groupby(level=group).mean()
     out.columns = [c.replace("solve_rate/", "") for c in out.columns]
     return out
 
 
-def plot_per_level(df: pd.DataFrame, group: str = "run_name", last_k: int = 1, ax=None):
+def plot_per_level(
+    df: pd.DataFrame,
+    group: str = "run_name",
+    last_k: int = 1,
+    ema_gamma: Optional[float] = None,
+    ax=None,
+):
     """Grouped bars: one cluster per held-out level, one bar per method."""
     import matplotlib.pyplot as plt
 
-    table = per_level_table(df, group=group, last_k=last_k)
+    table = per_level_table(df, group=group, last_k=last_k, ema_gamma=ema_gamma)
     if ax is None:
         _, ax = plt.subplots(figsize=(11, 4.5))
     n_methods = len(table.index)
@@ -173,14 +214,16 @@ def throughput(df: pd.DataFrame, group: str = "run_name") -> pd.DataFrame:
     return out.reset_index()
 
 
-def summarize(out_dir: str = ".", last_k: int = 1) -> Dict[str, Any]:
+def summarize(
+    out_dir: str = ".", last_k: int = 1, ema_gamma: Optional[float] = None
+) -> Dict[str, Any]:
     """One call for the notebook: curves table, final table, per-level table."""
     df = load_runs(out_dir)
     if df.empty:
         return {"runs": df, "final": df, "per_level": df, "throughput": df}
     return {
         "runs": df,
-        "final": final_table(df, last_k=last_k),
-        "per_level": per_level_table(df, last_k=last_k),
+        "final": final_table(df, last_k=last_k, ema_gamma=ema_gamma),
+        "per_level": per_level_table(df, last_k=last_k, ema_gamma=ema_gamma),
         "throughput": throughput(df),
     }
