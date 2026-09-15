@@ -185,11 +185,15 @@ DEFAULTS: Dict[str, Any] = {
 }
 
 def _oracle_presets() -> Dict[str, Dict[str, Any]]:
-    """`sfl_oracle` and the four ablations that take it apart.
+    """`sfl_oracle`, the ablations that take it apart, and the same ablations on `level`.
 
     The base arm is the cascade: 8192 proposals ranked by the oracle, 64 played,
     32 kept. Each ablation removes exactly one mechanism, so a difference in the
     final solve rate has one candidate explanation rather than five.
+
+    `sfl_oracle` sees the BFS solution and is an upper bound, not a method; its
+    ablations say nothing about the honest variant. `sfl_oracle_level_*` repeat
+    them on the oracle that sees only the map.
     """
     base = {
         "teacher": "sfl_oracle",
@@ -200,6 +204,7 @@ def _oracle_presets() -> Dict[str, Dict[str, Any]]:
         # The verified shortlist: a seventh of what `sfl_accel` plays per phase.
         "sfl_num_levels": 64,
     }
+    level = {**base, "oracle_features": "level"}
     return {
         "sfl_oracle": base,
         # No verification: insert on prediction alone and give the phase's updates
@@ -207,10 +212,13 @@ def _oracle_presets() -> Dict[str, Dict[str, Any]]:
         "sfl_oracle_noverify": {**base, "oracle_verify": False},
         # Feature ablations: is a convnet over the map needed, or is the solver's
         # summary of it enough - or vice versa?
-        "sfl_oracle_level": {**base, "oracle_features": "level"},
+        "sfl_oracle_level": level,
         "sfl_oracle_bfs": {**base, "oracle_features": "bfs"},
         # ACCEL's blind mutation, with the oracle still driving the phase.
         "sfl_oracle_nomut": {**base, "oracle_mutation_proposals": 1},
+        # The same two ablations without the BFS features.
+        "sfl_oracle_level_noverify": {**level, "oracle_verify": False},
+        "sfl_oracle_level_nomut": {**level, "oracle_mutation_proposals": 1},
     }
 
 

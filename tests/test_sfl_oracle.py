@@ -72,6 +72,24 @@ def test_an_unverified_phase_is_one_update_and_reserves_nothing():
     assert oracle_budget_report(config)["reserved_updates"] == 0
 
 
+def test_the_level_ablations_differ_from_sfl_oracle_level_by_one_flag():
+    """The honest-oracle ablations must not quietly pick the BFS features back up."""
+    level = make_config(preset="sfl_oracle_level")
+    nomut = make_config(preset="sfl_oracle_level_nomut")
+    noverify = make_config(preset="sfl_oracle_level_noverify")
+
+    assert nomut["oracle_features"] == noverify["oracle_features"] == "level"
+    def differing(other):
+        return {k for k in level if level[k] != other[k]} - {"run_name", "group_name"}
+
+    assert differing(nomut) == {"oracle_mutation_proposals"}
+    assert differing(noverify) == {"oracle_verify"}
+    assert default_run_name(nomut) == "sfl_oracle_learnability_level_nomut"
+    assert default_run_name(noverify) == "sfl_oracle_learnability_level_noverify"
+    assert phase_length(noverify) == 1
+    assert oracle_budget_report(noverify)["reserved_updates"] == 0
+
+
 @pytest.mark.parametrize(
     "overrides",
     [
