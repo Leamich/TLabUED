@@ -81,8 +81,10 @@ stage_setup() {
   fi
   bash scripts/bootstrap.sh
   mkdir -p results
-  # On CPU: a GPU pytest maps tens of GB of device memory for nothing.
-  CUDA_VISIBLE_DEVICES="" "$PY" -m pytest tests -q
+  # On CPU: a GPU pytest maps tens of GB of device memory for nothing. Both
+  # variables: hiding the device alone makes jax 0.4.30 fail in its CUDA plugin
+  # instead of falling back, and JAX_PLATFORMS alone still maps device memory.
+  CUDA_VISIBLE_DEVICES="" JAX_PLATFORMS=cpu "$PY" -m pytest tests -q
   # On the GPU, but before any trainer exists: next to a full card it fails in cuSolver.
   "$PY" -m tlab_ued.parity --presets dr plr accel --num_updates 500 2>&1 | tee results/parity.log
   local identical
