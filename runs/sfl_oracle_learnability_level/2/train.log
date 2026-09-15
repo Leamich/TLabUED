@@ -133,3 +133,115 @@ Logging update: 12000
 [48/120] solve_rate/mean=0.775 sps=2978022 eta=0.66h
 Logging update: 12250
 [49/120] solve_rate/mean=0.612 sps=3031890 eta=0.65h
+Logging update: 12500
+[50/120] solve_rate/mean=0.725 sps=3164053 eta=0.63h
+Logging update: 12750
+[51/120] solve_rate/mean=0.737 sps=3204439 eta=0.62h
+Logging update: 13000
+[52/120] solve_rate/mean=0.550 sps=3249281 eta=0.62h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 13250
+[53/120] solve_rate/mean=0.525 sps=3365044 eta=0.60h
+Logging update: 13500
+[54/120] solve_rate/mean=0.512 sps=3425250 eta=0.59h
+Logging update: 13750
+[55/120] solve_rate/mean=0.375 sps=3513803 eta=0.58h
+Logging update: 14000
+[56/120] solve_rate/mean=0.700 sps=3625572 eta=0.56h
+Logging update: 14250
+[57/120] solve_rate/mean=0.500 sps=3563380 eta=0.57h
+Logging update: 14500
+[58/120] solve_rate/mean=0.312 sps=3623786 eta=0.56h
+Logging update: 14750
+[59/120] solve_rate/mean=0.400 sps=3690176 eta=0.55h
+Logging update: 15000
+[60/120] solve_rate/mean=0.538 sps=3757563 eta=0.55h
+Logging update: 15250
+[61/120] solve_rate/mean=0.613 sps=3801149 eta=0.54h
+Logging update: 15500
+[62/120] solve_rate/mean=0.638 sps=3896346 eta=0.53h
+Logging update: 15750
+[63/120] solve_rate/mean=0.600 sps=4040627 eta=0.51h
+Logging update: 16000
+[64/120] solve_rate/mean=0.562 sps=4121125 eta=0.49h
+Logging update: 16250
+[65/120] solve_rate/mean=0.637 sps=4153343 eta=0.49h
+Logging update: 16500
+[66/120] solve_rate/mean=0.487 sps=4205859 eta=0.48h
+Logging update: 16750
+[67/120] solve_rate/mean=0.663 sps=4181399 eta=0.48h
+Logging update: 17000
+[68/120] solve_rate/mean=0.463 sps=4228641 eta=0.48h
+Logging update: 17250
+[69/120] solve_rate/mean=0.550 sps=4339264 eta=0.46h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 17500
+[70/120] solve_rate/mean=0.538 sps=4370640 eta=0.46h
+Logging update: 17750
+[71/120] solve_rate/mean=0.663 sps=4412708 eta=0.45h
+Logging update: 18000
+[72/120] solve_rate/mean=0.700 sps=4480933 eta=0.44h
+Logging update: 18250
+[73/120] solve_rate/mean=0.625 sps=4548856 eta=0.43h
+Logging update: 18500
+[74/120] solve_rate/mean=0.688 sps=4670276 eta=0.41h
+Logging update: 18750
+[75/120] solve_rate/mean=0.525 sps=4695722 eta=0.41h
+Logging update: 19000
+[76/120] solve_rate/mean=0.450 sps=4733232 eta=0.40h
+Logging update: 19250
+[77/120] solve_rate/mean=0.450 sps=4802834 eta=0.39h
+Logging update: 19500
+[78/120] solve_rate/mean=0.588 sps=4993970 eta=0.37h
+Logging update: 19750
+[79/120] solve_rate/mean=0.387 sps=4936703 eta=0.37h
+Logging update: 20000
+[80/120] solve_rate/mean=0.438 sps=5044761 eta=0.36h
+Logging update: 20250
+[81/120] solve_rate/mean=0.575 sps=5063176 eta=0.35h
+Logging update: 20500
+[82/120] solve_rate/mean=0.475 sps=5182986 eta=0.34h
+Logging update: 20750
+[83/120] solve_rate/mean=0.425 sps=5335815 eta=0.33h
+Logging update: 21000
+[84/120] solve_rate/mean=0.600 sps=5353753 eta=0.32h
+Logging update: 21250
+[85/120] solve_rate/mean=0.750 sps=5387861 eta=0.31h
+Logging update: 21500
+[86/120] solve_rate/mean=0.875 sps=5363969 eta=0.31h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 21750
+[87/120] solve_rate/mean=0.663 sps=5398797 eta=0.30h
+Logging update: 22000
+[88/120] solve_rate/mean=0.650 sps=5447349 eta=0.29h
+Logging update: 22250
+[89/120] solve_rate/mean=0.500 sps=5593353 eta=0.28h
+Logging update: 22500
+[90/120] solve_rate/mean=0.488 sps=5655792 eta=0.27h
+Logging update: 22750
+[91/120] solve_rate/mean=0.613 sps=5650782 eta=0.27h
+Logging update: 23000
+[92/120] solve_rate/mean=0.500 sps=5776373 eta=0.25h
+Logging update: 23250
+[93/120] solve_rate/mean=0.637 sps=5841224 eta=0.24h
+Logging update: 23500
+[94/120] solve_rate/mean=0.413 sps=5949831 eta=0.23h
+Logging update: 23750
+[95/120] solve_rate/mean=0.575 sps=6056031 eta=0.22h
+Logging update: 24000
+[96/120] solve_rate/mean=0.463 sps=6058564 eta=0.22h
+Logging update: 24250
+[97/120] solve_rate/mean=0.613 sps=6083121 eta=0.21h
+Logging update: 24500
+[98/120] solve_rate/mean=0.475 sps=6104061 eta=0.20h
+Logging update: 24750
+[99/120] solve_rate/mean=0.850 sps=6164510 eta=0.19h
+Logging update: 25000
+[100/120] solve_rate/mean=0.475 sps=6245504 eta=0.18h
+Logging update: 25250
+[101/120] solve_rate/mean=0.663 sps=6448739 eta=0.17h
+Logging update: 25500
+[102/120] solve_rate/mean=0.550 sps=6525734 eta=0.16h
