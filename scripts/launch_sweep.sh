@@ -39,6 +39,11 @@ export PY OUT_DIR JOBS
 # on LD_LIBRARY_PATH shadow the pip wheels jax was built against.
 export MPLBACKEND=Agg
 unset LD_LIBRARY_PATH
+# jaxued builds jnp arrays at import time, so every helper python here that
+# imports the teachers - the sweep runner itself included - initialises CUDA and
+# would preallocate 75% of the card, leaving the trainers a quarter of it.
+# Trainers are unaffected: sweep.launch sets their memory settings itself.
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
 
 export CUDA_MPS_PIPE_DIRECTORY=/tmp/nvidia-mps
 export CUDA_MPS_LOG_DIRECTORY=/tmp/nvidia-mps-log
