@@ -115,3 +115,114 @@ Logging update: 10500
 [42/120] solve_rate/mean=0.050 sps=2659551 eta=0.70h
 Logging update: 10750
 [43/120] solve_rate/mean=0.512 sps=2740041 eta=0.69h
+Logging update: 11000
+[44/120] solve_rate/mean=0.362 sps=2781605 eta=0.68h
+Logging update: 11250
+[45/120] solve_rate/mean=0.325 sps=2853197 eta=0.67h
+Logging update: 11500
+[46/120] solve_rate/mean=0.612 sps=2914714 eta=0.66h
+Logging update: 11750
+[47/120] solve_rate/mean=0.325 sps=3008189 eta=0.65h
+Logging update: 12000
+[48/120] solve_rate/mean=0.500 sps=3063722 eta=0.64h
+Logging update: 12250
+[49/120] solve_rate/mean=0.237 sps=3135275 eta=0.63h
+Logging update: 12500
+[50/120] solve_rate/mean=0.363 sps=3183182 eta=0.63h
+Logging update: 12750
+[51/120] solve_rate/mean=0.475 sps=3259349 eta=0.61h
+Logging update: 13000
+[52/120] solve_rate/mean=0.450 sps=3327103 eta=0.60h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 13250
+[53/120] solve_rate/mean=0.625 sps=3378975 eta=0.60h
+Logging update: 13500
+[54/120] solve_rate/mean=0.513 sps=3426063 eta=0.59h
+Logging update: 13750
+[55/120] solve_rate/mean=0.412 sps=3482669 eta=0.58h
+Logging update: 14000
+[56/120] solve_rate/mean=0.550 sps=3556892 eta=0.57h
+Logging update: 14250
+[57/120] solve_rate/mean=0.500 sps=3604121 eta=0.57h
+Logging update: 14500
+[58/120] solve_rate/mean=0.525 sps=3659345 eta=0.56h
+Logging update: 14750
+[59/120] solve_rate/mean=0.475 sps=3730623 eta=0.55h
+Logging update: 15000
+[60/120] solve_rate/mean=0.588 sps=3826018 eta=0.54h
+Logging update: 15250
+[61/120] solve_rate/mean=0.275 sps=3895860 eta=0.53h
+Logging update: 15500
+[62/120] solve_rate/mean=0.600 sps=3937466 eta=0.52h
+Logging update: 15750
+[63/120] solve_rate/mean=0.462 sps=4012292 eta=0.51h
+Logging update: 16000
+[64/120] solve_rate/mean=0.600 sps=4071690 eta=0.50h
+Logging update: 16250
+[65/120] solve_rate/mean=0.913 sps=4156712 eta=0.49h
+Logging update: 16500
+[66/120] solve_rate/mean=0.712 sps=4223324 eta=0.48h
+Logging update: 16750
+[67/120] solve_rate/mean=0.750 sps=4296310 eta=0.47h
+Logging update: 17000
+[68/120] solve_rate/mean=0.850 sps=4328363 eta=0.46h
+Logging update: 17250
+[69/120] solve_rate/mean=0.788 sps=4379000 eta=0.46h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 17500
+[70/120] solve_rate/mean=0.512 sps=4454047 eta=0.45h
+Logging update: 17750
+[71/120] solve_rate/mean=0.400 sps=4525652 eta=0.44h
+Logging update: 18000
+[72/120] solve_rate/mean=0.400 sps=4564422 eta=0.43h
+Logging update: 18250
+[73/120] solve_rate/mean=0.625 sps=4657607 eta=0.42h
+Logging update: 18500
+[74/120] solve_rate/mean=0.725 sps=4699354 eta=0.41h
+Logging update: 18750
+[75/120] solve_rate/mean=0.400 sps=4795358 eta=0.40h
+Logging update: 19000
+[76/120] solve_rate/mean=0.637 sps=4854723 eta=0.39h
+Logging update: 19250
+[77/120] solve_rate/mean=0.650 sps=4891969 eta=0.39h
+Logging update: 19500
+[78/120] solve_rate/mean=0.625 sps=4960886 eta=0.38h
+Logging update: 19750
+[79/120] solve_rate/mean=0.400 sps=4999138 eta=0.37h
+Logging update: 20000
+[80/120] solve_rate/mean=0.637 sps=5091170 eta=0.36h
+Logging update: 20250
+[81/120] solve_rate/mean=0.663 sps=5169950 eta=0.35h
+Logging update: 20500
+[82/120] solve_rate/mean=0.713 sps=5241254 eta=0.34h
+Logging update: 20750
+[83/120] solve_rate/mean=0.538 sps=5280767 eta=0.33h
+Logging update: 21000
+[84/120] solve_rate/mean=0.512 sps=5345873 eta=0.32h
+Logging update: 21250
+[85/120] solve_rate/mean=0.775 sps=5411840 eta=0.31h
+Logging update: 21500
+[86/120] solve_rate/mean=0.837 sps=5469171 eta=0.30h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 21750
+[87/120] solve_rate/mean=0.650 sps=5543905 eta=0.29h
+Logging update: 22000
+[88/120] solve_rate/mean=0.575 sps=5602436 eta=0.29h
+Logging update: 22250
+[89/120] solve_rate/mean=0.763 sps=5654370 eta=0.28h
+Logging update: 22500
+[90/120] solve_rate/mean=0.863 sps=5689839 eta=0.27h
+Logging update: 22750
+[91/120] solve_rate/mean=0.750 sps=5793169 eta=0.26h
+Logging update: 23000
+[92/120] solve_rate/mean=0.700 sps=5872368 eta=0.25h
+Logging update: 23250
+[93/120] solve_rate/mean=0.688 sps=5888914 eta=0.24h
+Logging update: 23500
+[94/120] solve_rate/mean=0.762 sps=5971702 eta=0.23h
+Logging update: 23750
+[95/120] solve_rate/mean=0.550 sps=6027340 eta=0.22h
+Logging update: 24000
+[96/120] solve_rate/mean=0.962 sps=6106164 eta=0.21h
+Logging update: 24250
+[97/120] solve_rate/mean=0.725 sps=6166925 eta=0.21h
