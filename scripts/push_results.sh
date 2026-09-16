@@ -48,9 +48,11 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" || return 1
 
   local attempt
   for attempt in 1 2 3 4 5; do
-    # --autostash: running trainers keep rewriting metrics.csv files that an
-    # earlier progress commit already tracks.
-    if git pull --rebase --autostash -q origin "$BRANCH" && git push -q origin "HEAD:$BRANCH"; then
+    # Push only, never pull: this server is the branch's only writer, and
+    # `pull --rebase --autostash` resets the working tree while it runs. A run's
+    # metrics.csv and train.log are tracked after its first progress commit, so
+    # that reset rolled a finished run's files back to the last progress commit.
+    if git push -q origin "HEAD:$BRANCH"; then
       log "pushed: ${message%%$'\n'*}"
       return 0
     fi
