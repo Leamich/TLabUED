@@ -1,0 +1,411 @@
+
+=== 2026-09-15 14:02:02 launching: /workspace/venvs/jaxued/bin/python -m tlab_ued.train --project tlab-ued --run_name sfl_oracle_learnability_level_noverify --seed 1 --mode train --checkpoint_to_eval -1 --checkpoint_save_interval 17 --max_number_of_checkpoints 60 --eval_freq 250 --eval_num_attempts 10 --eval_levels SixteenRooms SixteenRooms2 Labyrinth LabyrinthFlipped Labyrinth2 StandardMaze StandardMaze2 StandardMaze3 --lr 0.0001 --max_grad_norm 0.5 --num_updates 30000 --num_steps 256 --num_train_envs 32 --num_minibatches 1 --gamma 0.995 --epoch_ppo 5 --clip_eps 0.2 --gae_lambda 0.98 --entropy_coeff 0.001 --critic_coeff 0.5 --agent_view_size 5 --score_function learnability --no-exploratory_grad_updates --level_buffer_capacity 4000 --replay_prob 1.0 --staleness_coeff 0.3 --temperature 0.3 --topk_k 4 --minimum_fill_ratio 0.5 --prioritization rank --buffer_duplicate_check --use_accel --num_edits 5 --n_walls 25 --teacher sfl_oracle --level_generator minigrid_walls --level_mutator minimax --log_media levels --out_dir /workspace/TLabUED --no-resume --diagnose_levels 1024 --diagnose_mutation_rounds 1 --no-ladder --ladder_proposals 8 --ladder_out  --no-allow_student_changes --sfl_num_attempts 4 --sfl_period 250 --sfl_num_levels 64 --sfl_topk 32 --sfl_p_decay 0.25 --oracle_features level --oracle_hidden 64 --oracle_lr 0.0003 --oracle_train_steps 2 --oracle_batch_size 256 --oracle_buffer_capacity 8192 --oracle_num_proposals 8192 --oracle_control_levels 16 --oracle_mutation_proposals 8 --oracle_rescore_buffer --no-oracle_verify --oracle_warmup_updates 1000
+
+Levels from generator 'minigrid_walls' (n_walls=25)  (n=1024)
+  solvable          99.5%   (goal unreachable 0.5%, needs >250 steps 0.0%)
+  optimal steps   median 11  mean 11.6  p10 5  p90 18  max 31
+  best return     0.958 mean over solvable levels
+  difficulty      trivial<=10 43.9% | easy<=30 55.5% | medium<=60 0.1% | hard<=120 0.0% | brutal>120 0.0% | unsolvable 0.5%
+  reachable area  99.5% of free cells   walls 23.3 (13.8% of the grid)
+...after 1x mutator 'minimax' (5 edits)  (n=1024)
+  solvable          99.6%   (goal unreachable 0.4%, needs >250 steps 0.0%)
+  optimal steps   median 12  mean 11.8  p10 5  p90 19  max 30
+  best return     0.957 mean over solvable levels
+  difficulty      trivial<=10 42.2% | easy<=30 57.4% | medium<=60 0.0% | hard<=120 0.0% | brutal>120 0.0% | unsolvable 0.4%
+  reachable area  99.5% of free cells   walls 24.5 (14.5% of the grid)
+
+  env_steps                   245760000
+  total_updates               30000
+  reserved_updates            0
+  expected_gradient_updates   15000.0
+  expected_mutation_updates   15000.0
+  expected_dr_updates         0.0
+  sfl_phase_updates           1
+  levels_scored_per_update    8
+  attempts_per_level          4
+  oracle_proposals_per_phase  8192
+  oracle_verified_per_phase   0
+  oracle_parameters           47809
+wandb: Tracking run with wandb version 0.17.5
+wandb: W&B syncing is set to `offline` in this directory.  
+wandb: Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+Logging update: 250
+[1/120] solve_rate/mean=0.000 sps=32336 eta=2.09h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 500
+[2/120] solve_rate/mean=0.000 sps=57677 eta=2.33h
+Logging update: 750
+[3/120] solve_rate/mean=0.000 sps=183665 eta=1.09h
+Logging update: 1000
+[4/120] solve_rate/mean=0.013 sps=243680 eta=1.08h
+Logging update: 1250
+[5/120] solve_rate/mean=0.000 sps=305481 eta=1.07h
+Logging update: 1500
+[6/120] solve_rate/mean=0.038 sps=366430 eta=1.06h
+Logging update: 1750
+[7/120] solve_rate/mean=0.087 sps=429690 eta=1.05h
+Logging update: 2000
+[8/120] solve_rate/mean=0.050 sps=494309 eta=1.03h
+Logging update: 2250
+[9/120] solve_rate/mean=0.062 sps=556194 eta=1.02h
+Logging update: 2500
+[10/120] solve_rate/mean=0.075 sps=620092 eta=1.01h
+Logging update: 2750
+[11/120] solve_rate/mean=0.125 sps=681104 eta=1.00h
+Logging update: 3000
+[12/120] solve_rate/mean=0.075 sps=741495 eta=0.99h
+Logging update: 3250
+[13/120] solve_rate/mean=0.125 sps=798735 eta=0.99h
+Logging update: 3500
+[14/120] solve_rate/mean=0.163 sps=865667 eta=0.98h
+Logging update: 3750
+[15/120] solve_rate/mean=0.225 sps=920325 eta=0.97h
+Logging update: 4000
+[16/120] solve_rate/mean=0.188 sps=988117 eta=0.96h
+Logging update: 4250
+[17/120] solve_rate/mean=0.325 sps=1033923 eta=0.96h
+Logging update: 4500
+[18/120] solve_rate/mean=0.225 sps=1093520 eta=0.96h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 4750
+[19/120] solve_rate/mean=0.325 sps=1159157 eta=0.94h
+Logging update: 5000
+[20/120] solve_rate/mean=0.200 sps=1225687 eta=0.93h
+Logging update: 5250
+[21/120] solve_rate/mean=0.300 sps=1289236 eta=0.92h
+Logging update: 5500
+[22/120] solve_rate/mean=0.250 sps=1347892 eta=0.91h
+Logging update: 5750
+[23/120] solve_rate/mean=0.288 sps=1412521 eta=0.90h
+Logging update: 6000
+[24/120] solve_rate/mean=0.363 sps=1453755 eta=0.90h
+Logging update: 6250
+[25/120] solve_rate/mean=0.213 sps=1535215 eta=0.88h
+Logging update: 6500
+[26/120] solve_rate/mean=0.488 sps=1592140 eta=0.87h
+Logging update: 6750
+[27/120] solve_rate/mean=0.300 sps=1644864 eta=0.87h
+Logging update: 7000
+[28/120] solve_rate/mean=0.688 sps=1711232 eta=0.86h
+Logging update: 7250
+[29/120] solve_rate/mean=0.587 sps=1791279 eta=0.84h
+Logging update: 7500
+[30/120] solve_rate/mean=0.675 sps=1827139 eta=0.84h
+Logging update: 7750
+[31/120] solve_rate/mean=0.750 sps=1894645 eta=0.83h
+Logging update: 8000
+[32/120] solve_rate/mean=0.587 sps=1947091 eta=0.82h
+Logging update: 8250
+[33/120] solve_rate/mean=0.550 sps=2012023 eta=0.81h
+Logging update: 8500
+[34/120] solve_rate/mean=0.788 sps=2101254 eta=0.79h
+Logging update: 8750
+[35/120] solve_rate/mean=0.550 sps=2151812 eta=0.79h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 9000
+[36/120] solve_rate/mean=0.675 sps=2231969 eta=0.77h
+Logging update: 9250
+[37/120] solve_rate/mean=0.725 sps=2259020 eta=0.77h
+Logging update: 9500
+[38/120] solve_rate/mean=0.637 sps=2345089 eta=0.76h
+Logging update: 9750
+[39/120] solve_rate/mean=0.600 sps=2394863 eta=0.75h
+Logging update: 10000
+[40/120] solve_rate/mean=0.588 sps=2474327 eta=0.74h
+Logging update: 10250
+[41/120] solve_rate/mean=0.675 sps=2527665 eta=0.73h
+Logging update: 10500
+[42/120] solve_rate/mean=0.788 sps=2566435 eta=0.73h
+Logging update: 10750
+[43/120] solve_rate/mean=0.825 sps=2645657 eta=0.71h
+Logging update: 11000
+[44/120] solve_rate/mean=0.587 sps=2696428 eta=0.71h
+Logging update: 11250
+[45/120] solve_rate/mean=0.650 sps=2763210 eta=0.69h
+Logging update: 11500
+[46/120] solve_rate/mean=0.850 sps=2848524 eta=0.68h
+Logging update: 11750
+[47/120] solve_rate/mean=0.788 sps=2896139 eta=0.67h
+Logging update: 12000
+[48/120] solve_rate/mean=0.825 sps=2970542 eta=0.66h
+Logging update: 12250
+[49/120] solve_rate/mean=0.838 sps=3008797 eta=0.66h
+Logging update: 12500
+[50/120] solve_rate/mean=0.900 sps=3081889 eta=0.65h
+Logging update: 12750
+[51/120] solve_rate/mean=0.863 sps=3140201 eta=0.64h
+Logging update: 13000
+[52/120] solve_rate/mean=0.775 sps=3187230 eta=0.63h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 13250
+[53/120] solve_rate/mean=0.788 sps=3274491 eta=0.62h
+Logging update: 13500
+[54/120] solve_rate/mean=0.737 sps=3330871 eta=0.61h
+Logging update: 13750
+[55/120] solve_rate/mean=0.762 sps=3380184 eta=0.60h
+Logging update: 14000
+[56/120] solve_rate/mean=0.575 sps=3431599 eta=0.59h
+Logging update: 14250
+[57/120] solve_rate/mean=0.825 sps=3514115 eta=0.58h
+Logging update: 14500
+[58/120] solve_rate/mean=0.875 sps=3550639 eta=0.58h
+Logging update: 14750
+[59/120] solve_rate/mean=0.875 sps=3619565 eta=0.57h
+Logging update: 15000
+[60/120] solve_rate/mean=0.762 sps=3666887 eta=0.56h
+Logging update: 15250
+[61/120] solve_rate/mean=0.600 sps=3735967 eta=0.55h
+Logging update: 15500
+[62/120] solve_rate/mean=0.675 sps=3844556 eta=0.53h
+Logging update: 15750
+[63/120] solve_rate/mean=0.613 sps=3845109 eta=0.53h
+Logging update: 16000
+[64/120] solve_rate/mean=0.438 sps=3913275 eta=0.52h
+Logging update: 16250
+[65/120] solve_rate/mean=0.650 sps=3973315 eta=0.51h
+Logging update: 16500
+[66/120] solve_rate/mean=0.613 sps=4012704 eta=0.51h
+Logging update: 16750
+[67/120] solve_rate/mean=0.700 sps=4100578 eta=0.49h
+Logging update: 17000
+[68/120] solve_rate/mean=0.712 sps=4193628 eta=0.48h
+Logging update: 17250
+[69/120] solve_rate/mean=0.700 sps=4237589 eta=0.47h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 17500
+[70/120] solve_rate/mean=0.888 sps=4283687 eta=0.46h
+Logging update: 17750
+[71/120] solve_rate/mean=0.538 sps=4382460 eta=0.45h
+Logging update: 18000
+[72/120] solve_rate/mean=0.475 sps=4391867 eta=0.45h
+Logging update: 18250
+[73/120] solve_rate/mean=0.600 sps=4511866 eta=0.43h
+Logging update: 18500
+[74/120] solve_rate/mean=0.800 sps=4548308 eta=0.43h
+Logging update: 18750
+[75/120] solve_rate/mean=0.538 sps=4580552 eta=0.42h
+Logging update: 19000
+[76/120] solve_rate/mean=0.688 sps=4642141 eta=0.41h
+Logging update: 19250
+[77/120] solve_rate/mean=0.525 sps=4700753 eta=0.40h
+Logging update: 19500
+[78/120] solve_rate/mean=0.425 sps=4785014 eta=0.39h
+Logging update: 19750
+[79/120] solve_rate/mean=0.500 sps=4852562 eta=0.38h
+Logging update: 20000
+[80/120] solve_rate/mean=0.525 sps=4894685 eta=0.37h
+Logging update: 20250
+[81/120] solve_rate/mean=0.587 sps=4947591 eta=0.36h
+Logging update: 20500
+[82/120] solve_rate/mean=0.837 sps=5056314 eta=0.35h
+Logging update: 20750
+[83/120] solve_rate/mean=0.825 sps=5080769 eta=0.34h
+Logging update: 21000
+[84/120] solve_rate/mean=0.688 sps=5160137 eta=0.33h
+Logging update: 21250
+[85/120] solve_rate/mean=0.675 sps=5174644 eta=0.33h
+Logging update: 21500
+[86/120] solve_rate/mean=0.600 sps=5281652 eta=0.31h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 21750
+[87/120] solve_rate/mean=0.800 sps=5335023 eta=0.31h
+Logging update: 22000
+[88/120] solve_rate/mean=0.538 sps=5393884 eta=0.30h
+Logging update: 22250
+[89/120] solve_rate/mean=0.512 sps=5464208 eta=0.29h
+Logging update: 22500
+[90/120] solve_rate/mean=0.750 sps=5506528 eta=0.28h
+Logging update: 22750
+[91/120] solve_rate/mean=0.825 sps=5535833 eta=0.27h
+Logging update: 23000
+[92/120] solve_rate/mean=0.675 sps=5613777 eta=0.26h
+Logging update: 23250
+[93/120] solve_rate/mean=0.913 sps=5697553 eta=0.25h
+Logging update: 23500
+[94/120] solve_rate/mean=0.700 sps=5738710 eta=0.24h
+Logging update: 23750
+[95/120] solve_rate/mean=0.825 sps=5808778 eta=0.23h
+Logging update: 24000
+[96/120] solve_rate/mean=0.712 sps=5960364 eta=0.22h
+Logging update: 24250
+[97/120] solve_rate/mean=0.738 sps=5895217 eta=0.22h
+Logging update: 24500
+[98/120] solve_rate/mean=0.925 sps=6056750 eta=0.20h
+Logging update: 24750
+[99/120] solve_rate/mean=0.525 sps=6028500 eta=0.20h
+Logging update: 25000
+[100/120] solve_rate/mean=0.775 sps=6101609 eta=0.19h
+Logging update: 25250
+[101/120] solve_rate/mean=0.738 sps=6197445 eta=0.18h
+Logging update: 25500
+[102/120] solve_rate/mean=0.762 sps=6291492 eta=0.17h
+Logging update: 25750
+[103/120] solve_rate/mean=0.688 sps=6335458 eta=0.16h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+Logging update: 26000
+[104/120] solve_rate/mean=0.575 sps=6386776 eta=0.15h
+Logging update: 26250
+[105/120] solve_rate/mean=0.625 sps=6494580 eta=0.14h
+Logging update: 26500
+[106/120] solve_rate/mean=0.438 sps=6739233 eta=0.13h
+Logging update: 26750
+[107/120] solve_rate/mean=0.525 sps=7086464 eta=0.11h
+Logging update: 27000
+[108/120] solve_rate/mean=0.625 sps=6385481 eta=0.12h
+Logging update: 27250
+[109/120] solve_rate/mean=0.375 sps=7183343 eta=0.09h
+Logging update: 27500
+[110/120] solve_rate/mean=0.862 sps=8327067 eta=0.08h
+Logging update: 27750
+[111/120] solve_rate/mean=0.575 sps=8104905 eta=0.07h
+Logging update: 28000
+[112/120] solve_rate/mean=0.900 sps=6938158 eta=0.07h
+Logging update: 28250
+[113/120] solve_rate/mean=0.775 sps=8185137 eta=0.05h
+Logging update: 28500
+[114/120] solve_rate/mean=0.700 sps=9402185 eta=0.04h
+Logging update: 28750
+[115/120] solve_rate/mean=0.600 sps=8882439 eta=0.04h
+Logging update: 29000
+[116/120] solve_rate/mean=0.675 sps=8087134 eta=0.03h
+Logging update: 29250
+[117/120] solve_rate/mean=0.812 sps=8075193 eta=0.02h
+Logging update: 29500
+[118/120] solve_rate/mean=0.675 sps=8216532 eta=0.02h
+Logging update: 29750
+[119/120] solve_rate/mean=0.550 sps=8514611 eta=0.01h
+Logging update: 30000
+[120/120] solve_rate/mean=0.612 sps=8501796 eta=0.00h
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+WARNING:absl:SaveArgs.aggregate is deprecated, please use custom TypeHandler (https://orbax.readthedocs.io/en/latest/custom_handlers.html#typehandler) or contact Orbax team to migrate before May 1st, 2024.
+wandb: - 0.000 MB of 0.000 MB uploadedwandb:                                                                                
+wandb: 
+wandb: Run history:
+wandb:              agent/actor_loss █▅▅▄▄▂▂▂▂▂▂▁▂▂▃▂▁▃▃▂▂▂▃▃▂▂▃▃▃▃▃▃▃▃▃▃▃▄▃▃
+wandb:             agent/critic_loss ▁▆█▇██▇██████████▇█▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+wandb:                 agent/entropy █▄▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                    agent/loss ▁▆████▇██████████▇███▇█▇▇▇▇▇▇▇▇▇▇█▇▇▇█▇▇
+wandb:         branch/num_dr_updates ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   branch/num_mutation_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:     branch/num_oracle_inserts ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:     branch/num_replay_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:        branch/num_sfl_updates ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          eval_ep_lengths/mean ██▇▇▆█▇▇▇▄▃▁▃▃▄▁▁▂▄▂▂▄▂▅▄▅▅▃▃▄▄▂▁▃▃▅▂▃▂▃
+wandb:         level/mean_num_blocks ▁▂▂▃▃▃▃▄▄▅▅▅▅▆▆▆▆▆▆▇▆▇▇▇▇▇█▇███████▇████
+wandb:   level_sampler/episode_count ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:       level_sampler/max_score ███▇█▅█████▅█▂█▄██▆▄███▇█▇█▄▅███▇██▁▇▇█▄
+wandb: level_sampler/mean_max_return ▁▄▆▇██████████████▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇
+wandb:          level_sampler/mean_p ▁▂▄▅▆▆▇▇▇███████████████████████████████
+wandb:      level_sampler/mean_score ▁█▆▅▄▄▃▂▂▂▂▂▂▂▃▂▃▂▂▃▂▂▂▂▃▂▂▂▂▂▃▂▂▂▂▃▂▂▂▂
+wandb:            level_sampler/size ▁███████████████████████████████████████
+wandb:  level_sampler/weighted_score ▆█▄▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▃▂▁▂▂▂▁▂▂▂▂▂▂▁▂▂▁
+wandb:                 num_env_steps ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:                   num_updates ▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▄▄▄▄▄▅▅▅▅▅▅▆▆▆▆▆▇▇▇▇▇▇███
+wandb:                   oracle/bias ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                  oracle/brier ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:          oracle/buffer_mean_p ▁▄██████████████████████████████████████
+wandb:          oracle/control_brier ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:   oracle/control_learnability ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:      oracle/control_rank_corr ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:                   oracle/loss ▁█▄▃▄▅▁▄▃▃▃▂▁▂▁▃▃▃▂▃▁▃▃▃▄▃▂▁▃▂▂▃▃▂▁▂▂▃▁▂
+wandb:           oracle/observations ▁███████████████████████████████████████
+wandb: oracle/predicted_learnability ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:              oracle/rank_corr ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:  oracle/selected_learnability ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:         oracle/selection_gain ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+wandb:              return/Labyrinth ▁▁▁▁▁▁▁▁▁▃▆▄▆█▆▇▆▆▇▇▁▁▁▁▄▁▁▄▄▁▂█▆▅▁▁▄▁▃▁
+wandb:             return/Labyrinth2 ▁▁▁▁▁▂▄▂▃▇▇▇█▇▆▃▆▇▇█▂▁▁▁▅▂▁▁▁▁▂▄▆▁▂▁▃▄▁▂
+wandb:       return/LabyrinthFlipped ▁▁▁▁▁▁▁▁▁▃▂▂▂▁▂▇▇▁▁▁▂▆▆▂▂▂▃█▁▂▄▃█▆▇▄▇▇▅▆
+wandb:           return/SixteenRooms ▁▁▃▄▆▅▅▇▃▇▇▇▅█▅▇▅▇▇█▇▅▇▇█▇▅█▇█▆█▇██▇███▅
+wandb:          return/SixteenRooms2 ▁▁▂▁▁▂▃▄▁▂▆▄▅▃▅▄▃▆▃▅▅▄▆▅▇▆▄▃▃█▂▄▅▆▂▁▅▅▂▄
+wandb:           return/StandardMaze ▁▁▁▁▁▁▄▁▃▇▃▄▂▁▅▄▅▅▄▄▄▅█▂▃▃▂▄▃▁█▇▅▄▄▂▆▄▄▅
+wandb:          return/StandardMaze2 ▁▁▁▁▁▁▁▁▁▂▂▅▃▁▆▇▅▂▃▇█▇█▄▄▅▇▇▇▅▆▇▇▁▃▅▄▆▇█
+wandb:          return/StandardMaze3 ▁▁▁▁▁▁▁▁▁▆▇▇▅▆▆▆▆▆▅▄▆▄▄▄▃▂▄▄▆▆▅▃▅▅▅▅█▅█▃
+wandb:                   return/mean ▁▁▂▂▂▂▃▃▂▆▇▇▆▆▇█▇▇▆█▆▆▇▅▆▅▄▇▆▆▆▇█▆▅▅█▇▇▆
+wandb:   sfl/population_learnability ▁▇████▇▇▆▆▆▆▆▇▆▆▇▅▇▆▄▅▅▅▄▅▅▅▄▅▇▅▄▅▅▅▅▅▅▇
+wandb:         sfl/topk_learnability ▁▇████▇▇▆▆▆▆▆▇▆▆▇▅▇▆▄▅▅▅▄▅▅▅▄▅▇▅▄▅▅▅▅▅▅▇
+wandb:          solve_rate/Labyrinth ▁▁▁▁▁▁▁▁▁▅█▆███▇▇███▂▂▁▁█▂▁▇▆▁▃██▇▂▁▇▁▄▁
+wandb:         solve_rate/Labyrinth2 ▁▁▁▁▁▃▆▃▅██▇█▇▇▄████▂▁▁▁█▂▁▂▁▁▃▅▇▁▂▃▅▇▁▄
+wandb:   solve_rate/LabyrinthFlipped ▁▁▁▁▁▁▁▁▁▅▃▅▄▂▃▇▇▂▁▂▃▇▇▃▄▂▇█▂▃▅▅██▇▇█▇▆▆
+wandb:       solve_rate/SixteenRooms ▁▁▅▅█▇▆▇▅███▇█▇▇▅███▇▆████▆███▇█▇██████▅
+wandb:      solve_rate/SixteenRooms2 ▁▂▂▁▁▃▅▆▂▂▇▆█▇█▇▇█▇▇▇▅█▇▇▇▅▆▅█▃▆▆█▂▁█▅▃▅
+wandb:       solve_rate/StandardMaze ▁▁▁▁▁▁▅▁▄█▆▅▂▁▇▇█▆▇████▃▅▅▂█▅▂█▇██▇▄████
+wandb:      solve_rate/StandardMaze2 ▁▁▁▁▁▂▂▂▁▂▂▇▃▁▇█▆▃▄████▇▇▇██▇▆█▇█▁▃▇▅▇██
+wandb:      solve_rate/StandardMaze3 ▁▁▁▁▁▁▁▁▁████▇▇█▇██▇█▇▇▇▆▅████████▇▇█▇█▆
+wandb:               solve_rate/mean ▁▁▂▂▂▂▃▃▃▆▇▇▆▅▇▇▇▇▇█▆▆▆▅▇▅▅▇▆▅▆▇█▇▅▅█▇▆▆
+wandb:                           sps ▁▁▁▁▂▂▂▂▂▂▃▃▃▃▃▃▃▄▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▇████
+wandb:              steps_per_second ▁▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆█▇▇▇
+wandb:                    time_delta █▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁
+wandb:            train/learnability ▁█▇█▇▇▆▆▆▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▅▄▄▄▄▅▄▄▄▄▄▄▄▄▄
+wandb:            train/success_rate ▁▅▇▇▇██████████████████▇█████████▇██████
+wandb: 
+wandb: Run summary:
+wandb:              agent/actor_loss -0.00039
+wandb:             agent/critic_loss 0.01235
+wandb:                 agent/entropy 0.02
+wandb:                    agent/loss 0.00577
+wandb:         branch/num_dr_updates 250
+wandb:   branch/num_mutation_updates 14875
+wandb:     branch/num_oracle_inserts 119
+wandb:     branch/num_replay_updates 14875
+wandb:        branch/num_sfl_updates 0
+wandb:          eval_ep_lengths/mean 178.5
+wandb:         level/mean_num_blocks 48.684
+wandb:   level_sampler/episode_count 600808
+wandb:       level_sampler/max_score 0.2439
+wandb: level_sampler/mean_max_return 0.79962
+wandb:          level_sampler/mean_p 0.84358
+wandb:      level_sampler/mean_score 0.0767
+wandb:            level_sampler/size 4000
+wandb:  level_sampler/weighted_score 0.19036
+wandb:                 num_env_steps 245760000
+wandb:                   num_updates 30000
+wandb:                   oracle/bias 0.0
+wandb:                  oracle/brier 0.0
+wandb:          oracle/buffer_mean_p 0.88987
+wandb:          oracle/control_brier 0.0
+wandb:   oracle/control_learnability 0.0
+wandb:      oracle/control_rank_corr 0.0
+wandb:                   oracle/loss 0.38617
+wandb:           oracle/observations 8192
+wandb: oracle/predicted_learnability 0.0
+wandb:              oracle/rank_corr 0.0
+wandb:  oracle/selected_learnability 0.0
+wandb:         oracle/selection_gain 0.0
+wandb:              return/Labyrinth 0.0
+wandb:             return/Labyrinth2 0.08752
+wandb:       return/LabyrinthFlipped 0.3598
+wandb:           return/SixteenRooms 0.49344
+wandb:          return/SixteenRooms2 0.29912
+wandb:           return/StandardMaze 0.26992
+wandb:          return/StandardMaze2 0.54928
+wandb:          return/StandardMaze3 0.25216
+wandb:                   return/mean 0.2889
+wandb:   sfl/population_learnability 0.2166
+wandb:         sfl/topk_learnability 0.2166
+wandb:          solve_rate/Labyrinth 0.0
+wandb:         solve_rate/Labyrinth2 0.4
+wandb:   solve_rate/LabyrinthFlipped 0.7
+wandb:       solve_rate/SixteenRooms 0.6
+wandb:      solve_rate/SixteenRooms2 0.5
+wandb:       solve_rate/StandardMaze 1.0
+wandb:      solve_rate/StandardMaze2 1.0
+wandb:      solve_rate/StandardMaze3 0.7
+wandb:               solve_rate/mean 0.6125
+wandb:                           sps 8501796.04729
+wandb:              steps_per_second 70848.30039
+wandb:                    time_delta 28.90683
+wandb:            train/learnability 0.1025
+wandb:            train/success_rate 0.71999
+wandb: 
+wandb: You can sync this run to the cloud by running:
+wandb: wandb sync /workspace/TLabUED/runs/sfl_oracle_learnability_level_noverify/1/wandb/offline-run-20260915_140233-hdxmmywf
+wandb: Find logs at: ./runs/sfl_oracle_learnability_level_noverify/1/wandb/offline-run-20260915_140233-hdxmmywf/logs
+wandb: WARNING The new W&B backend becomes opt-out in version 0.18.0; try it out with `wandb.require("core")`! See https://wandb.me/wandb-core for more information.

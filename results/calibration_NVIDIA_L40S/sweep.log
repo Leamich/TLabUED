@@ -1,0 +1,24 @@
+run                     seed  state        progress    pid
+sfl_accel_learnability_smoke0     running      0/2         25979
+sfl_accel_learnability_n64_smoke0     running      0/2         25980
+sfl_oracle_learnability_level_smoke0     running      0/2         25981
+sfl_oracle_learnability_level_nomut_smoke0     running      0/2         25982
+sfl_oracle_learnability_level_noverify_smoke0     running      0/2         25983
+run                     seed  state        progress    pid
+sfl_accel_learnability_smoke0     running      0/2         25979
+sfl_accel_learnability_n64_smoke0     running      0/2         25980
+sfl_oracle_learnability_level_smoke0     running      0/2         25981
+sfl_oracle_learnability_level_nomut_smoke0     running      0/2         25982
+sfl_oracle_learnability_level_noverify_smoke0     running      0/2         25983
+run                     seed  state        progress    pid
+sfl_accel_learnability_smoke0     running      1/2         25979
+sfl_accel_learnability_n64_smoke0     running      1/2         25980
+sfl_oracle_learnability_level_smoke0     running      1/2         25981
+sfl_oracle_learnability_level_nomut_smoke0     running      1/2         25982
+sfl_oracle_learnability_level_noverify_smoke0     running      1/2         25983
+run                     seed  state        progress    pid
+sfl_accel_learnability_smoke0     done         2/2         25979
+sfl_accel_learnability_n64_smoke0     done         2/2         25980
+sfl_oracle_learnability_level_smoke0     done         2/2         25981
+sfl_oracle_learnability_level_nomut_smoke0     done         2/2         25982
+sfl_oracle_learnability_level_noverify_smoke0     done         2/2         25983
